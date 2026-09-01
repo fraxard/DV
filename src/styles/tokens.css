@@ -1,0 +1,121 @@
+/* ============================================================
+   DIGIVIRASAT — Design Tokens
+   Edit ONLY this file to retheme the entire site.
+   ============================================================ */
+
+:root {
+
+  /* ── Color palette ─────────────────────────────────────── */
+
+  /* Backgrounds */
+  --color-bg:              #F5F6F8;   /* warm off-white page bg */
+  --color-surface:         #FFFFFF;   /* cards, inputs, surfaces */
+  --color-surface-muted:   #F0F2F6;   /* subtle filled areas */
+  --color-surface-dark:    #0C1322;   /* inverted/dark sections */
+  --color-surface-dark-2:  #111827;   /* slightly lighter dark */
+
+  /* Text */
+  --color-text:            #0A0F1E;   /* near-black, primary */
+  --color-text-secondary:  #3D4A5C;   /* body, secondary */
+  --color-text-muted:      #7A8599;   /* placeholders, labels */
+  --color-text-inverse:    #FFFFFF;   /* text on dark bg */
+  --color-text-inverse-muted: rgba(255,255,255,0.55);
+
+  /* Brand primary — DigiVirasat blue */
+  --color-primary:         #1B4FD8;
+  --color-primary-hover:   #1440B8;
+  --color-primary-deep:    #0D2E8A;
+  --color-primary-soft:    #EEF3FF;   /* tint bg */
+  --color-primary-border:  #C2D4FF;
+
+  /* Borders */
+  --color-border:          #E3E7EF;
+  --color-border-strong:   #C8CFDA;
+
+  /* Semantic */
+  --color-success:         #16A34A;
+  --color-success-soft:    #DCFCE7;
+  --color-warning:         #D97706;
+  --color-warning-soft:    #FEF3C7;
+  --color-danger:          #DC2626;
+  --color-danger-soft:     #FEE2E2;
+
+  /* ── Derived transparencies ────────────────────────────── */
+  --color-black-04:        rgba(10, 15, 30, 0.04);
+  --color-black-08:        rgba(10, 15, 30, 0.08);
+  --color-black-12:        rgba(10, 15, 30, 0.12);
+  --color-white-08:        rgba(255, 255, 255, 0.08);
+  --color-white-12:        rgba(255, 255, 255, 0.12);
+  --color-white-20:        rgba(255, 255, 255, 0.20);
+  --color-white-40:        rgba(255, 255, 255, 0.40);
+  --color-white-60:        rgba(255, 255, 255, 0.60);
+  --color-primary-08:      rgba(27, 79, 216, 0.08);
+  --color-primary-16:      rgba(27, 79, 216, 0.16);
+
+  /* ── Typography ────────────────────────────────────────── */
+  --font-sans:   'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Scale */
+  --text-xs:     0.6875rem;   /* 11px */
+  --text-sm:     0.8125rem;   /* 13px */
+  --text-base:   1rem;        /* 16px */
+  --text-lg:     1.125rem;    /* 18px */
+  --text-xl:     1.25rem;     /* 20px */
+  --text-2xl:    1.5rem;      /* 24px */
+  --text-3xl:    2rem;        /* 32px */
+  --text-4xl:    2.5rem;      /* 40px */
+  --text-5xl:    3.25rem;     /* 52px */
+  --text-6xl:    clamp(3.5rem, 6vw, 5rem);
+  --text-display: clamp(4rem, 8vw, 7.5rem);
+ --text-hero: clamp(2.75rem, 5.5vw, 5.25rem);
+
+  /* ── Spacing scale ─────────────────────────────────────── */
+  --sp-1:   4px;
+  --sp-2:   8px;
+  --sp-3:   12px;
+  --sp-4:   16px;
+  --sp-5:   20px;
+  --sp-6:   24px;
+  --sp-8:   32px;
+  --sp-10:  40px;
+  --sp-12:  48px;
+  --sp-14:  56px;
+  --sp-16:  64px;
+  --sp-20:  80px;
+  --sp-24:  96px;
+  --sp-32:  128px;
+
+  /* ── Border radius ─────────────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-2xl:  28px;
+  --radius-pill: 100px;
+
+  /* ── Shadows ───────────────────────────────────────────── */
+  --shadow-xs:  0 1px 2px rgba(10, 15, 30, 0.06);
+  --shadow-sm:  0 2px 8px rgba(10, 15, 30, 0.07), 0 1px 2px rgba(10, 15, 30, 0.04);
+  --shadow-md:  0 4px 16px rgba(10, 15, 30, 0.09), 0 2px 4px rgba(10, 15, 30, 0.04);
+  --shadow-lg:  0 12px 40px rgba(10, 15, 30, 0.11), 0 4px 8px rgba(10, 15, 30, 0.05);
+  --shadow-xl:  0 24px 64px rgba(10, 15, 30, 0.13);
+  --shadow-primary: 0 8px 24px rgba(27, 79, 216, 0.28);
+
+  /* ── Transitions ───────────────────────────────────────── */
+  --ease:          cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out:      cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast:        120ms var(--ease);
+  --t-mid:         220ms var(--ease-out);
+  --t-slow:        380ms var(--ease-out);
+
+  /* ── Layout ────────────────────────────────────────────── */
+  --container-sm:  640px;
+  --container-md:  900px;
+  --container-lg:  1200px;
+  --container-xl:  1400px;
+  --nav-height:    68px;
+
+  /* ── Breakpoints (reference only for JS) ───────────────── */
+  /* --bp-sm: 640px; --bp-md: 768px; --bp-lg: 1024px; --bp-xl: 1280px; */
+}

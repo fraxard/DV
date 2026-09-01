@@ -1,0 +1,98 @@
+.section {
+  padding-block: clamp(var(--sp-20), 10vw, var(--sp-32));
+  background: var(--color-surface-dark);
+  color: var(--color-text-inverse);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: var(--sp-20);
+  align-items: start;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  position: sticky;
+  top: calc(var(--nav-height) + var(--sp-8));
+}
+
+.title {
+  font-size: clamp(var(--text-3xl), 4vw, var(--text-5xl));
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--color-text-inverse);
+}
+
+.body {
+  font-size: var(--text-base);
+  line-height: 1.7;
+  color: var(--color-text-inverse-muted);
+  max-width: 38ch;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-inverse);
+  background: var(--color-white-08);
+  border: 1px solid var(--color-white-12);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-pill);
+  width: fit-content;
+}
+
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.principle {
+  display: flex;
+  gap: var(--sp-5);
+  padding: var(--sp-6) 0;
+  border-bottom: 1px solid var(--color-white-08);
+}
+.principle:last-child { border-bottom: none; }
+
+.principleCheck {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary-08);
+  border: 1px solid var(--color-primary-16);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.principleTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text-inverse);
+  margin-bottom: var(--sp-2);
+}
+
+.principleBody {
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-text-inverse-muted);
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .layout { grid-template-columns: 1fr; gap: var(--sp-12); }
+  .left { position: static; }
+}

@@ -1,0 +1,184 @@
+.section {
+  padding-block: clamp(var(--sp-20), 10vw, var(--sp-32));
+  background: var(--color-bg);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--sp-12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.title {
+  font-size: clamp(var(--text-3xl), 4vw, var(--text-5xl));
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+.sub {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  max-width: 44ch;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--sp-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  position: relative;
+  transition: box-shadow var(--t-mid), border-color var(--t-mid);
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-strong);
+}
+
+.cardHighlighted {
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-text-inverse);
+}
+.cardHighlighted:hover {
+  border-color: var(--color-text);
+  box-shadow: var(--shadow-xl);
+}
+
+.badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 12px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.cardTop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.planName {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: inherit;
+}
+.planDesc {
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+.cardHighlighted .planDesc { color: var(--color-text-inverse-muted); }
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+.price {
+  font-size: var(--text-4xl);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: inherit;
+  line-height: 1;
+}
+.period {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.cardHighlighted .period { color: var(--color-text-inverse-muted); }
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+}
+.cardHighlighted .divider { background: var(--color-white-12); }
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  flex: 1;
+}
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+.cardHighlighted .feature { color: var(--color-text-inverse-muted); }
+
+.featureCheck {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.cardHighlighted .featureCheck {
+  background: var(--color-white-12);
+  color: var(--color-text-inverse);
+}
+
+.ctaDefault {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  border-color: var(--color-text);
+}
+.ctaDefault:hover {
+  background: var(--color-surface-dark-2);
+  border-color: var(--color-surface-dark-2);
+}
+
+.ctaHighlighted {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: transparent;
+}
+.ctaHighlighted:hover {
+  background: var(--color-bg);
+}
+
+.note {
+  text-align: center;
+  margin-top: var(--sp-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin-inline: auto;
+  }
+}

@@ -1,0 +1,109 @@
+.section {
+  padding-block: clamp(var(--sp-20), 10vw, var(--sp-32));
+  background: var(--color-bg);
+}
+
+.inner {
+  background: var(--color-primary);
+  border-radius: var(--radius-2xl);
+  padding: clamp(var(--sp-12), 6vw, var(--sp-20));
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-12);
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.inner::before {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  right: -100px;
+  top: -200px;
+  pointer-events: none;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  position: relative;
+  z-index: 1;
+}
+
+.title {
+  font-size: clamp(var(--text-3xl), 4vw, var(--text-5xl));
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--color-text-inverse);
+}
+
+.sub {
+  font-size: var(--text-lg);
+  line-height: 1.65;
+  color: var(--color-white-60);
+  max-width: 44ch;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.note {
+  font-size: var(--text-xs);
+  color: var(--color-white-40);
+  font-weight: 500;
+}
+
+/* CTA button override for blue section */
+.actions :global(.btn--blue) {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border-color: var(--color-surface);
+}
+.actions :global(.btn--blue):hover {
+  background: var(--color-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.right {
+  position: relative;
+  z-index: 1;
+}
+
+.card {
+  background: var(--color-white-08);
+  border: 1px solid var(--color-white-12);
+  border-radius: var(--radius-xl);
+  padding: var(--sp-8) var(--sp-10);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  min-width: 180px;
+  backdrop-filter: blur(8px);
+}
+
+.cardIcon {
+  font-size: 2.5rem;
+}
+.cardText {
+  font-size: var(--text-sm);
+  color: var(--color-white-60);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .inner { grid-template-columns: 1fr; }
+  .right { display: none; }
+  .actions { flex-direction: column; align-items: flex-start; }
+}
