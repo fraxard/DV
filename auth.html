@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — DigiVirasat</title>
+  <meta name="description" content="Sign in or create your DigiVirasat account." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+
+    <!-- Logo -->
+    <a href="index.html" class="auth-logo">DigiVirasat<span>.</span></a>
+
+    <!-- Login / Sign Up tabs -->
+    <div class="auth-tabs" role="tablist">
+      <div class="auth-tab active" role="tab" data-tab="login" tabindex="0">Sign In</div>
+      <div class="auth-tab"        role="tab" data-tab="signup" tabindex="0">Create Account</div>
+    </div>
+
+    <!-- Method switcher -->
+    <div class="auth-method-switch" role="group" aria-label="Sign in method">
+      <button class="method-btn active" data-method="email">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        Email
+      </button>
+      <button class="method-btn" data-method="phone">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <line x1="12" y1="18" x2="12" y2="18.01"/>
+        </svg>
+        Phone / OTP
+      </button>
+    </div>
+
+    <!-- ── EMAIL FORM ───────────────────────────────────── -->
+    <div id="email-section">
+
+      <!-- Sign In with email -->
+      <form class="auth-form" id="email-login-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="login-email">Email Address</label>
+          <input class="form-input" type="email" id="login-email" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <input class="form-input" type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required />
+        </div>
+        <div class="auth-message" id="login-email-msg"></div>
+        <button type="submit" class="btn btn-primary auth-submit">Sign In →</button>
+        <p style="text-align:center; font-size:0.78rem; margin-top:0.25rem;">
+          <a href="#" id="forgot-link" style="color:var(--c-accent-lt)">Forgot password?</a>
+        </p>
+      </form>
+
+      <!-- Sign Up with email -->
+      <form class="auth-form hidden" id="email-signup-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="signup-name">Full Name</label>
+          <input class="form-input" type="text" id="signup-name" placeholder="Ayush Sharma" autocomplete="name" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="signup-email">Email Address</label>
+          <input class="form-input" type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="signup-password">Password</label>
+          <input class="form-input" type="password" id="signup-password" placeholder="At least 8 characters" autocomplete="new-password" required />
+        </div>
+        <div class="auth-message" id="signup-email-msg"></div>
+        <button type="submit" class="btn btn-primary auth-submit">Create Account →</button>
+      </form>
+
+    </div>
+
+    <!-- ── PHONE FORM ───────────────────────────────────── -->
+    <div id="phone-section" class="hidden">
+
+      <!-- Step 1: Enter phone number -->
+      <div id="phone-entry-step">
+        <div class="auth-form" style="gap: var(--s-sm)">
+          <div class="form-group">
+            <label class="form-label" for="phone-input">Mobile Number</label>
+            <div class="phone-row">
+              <div class="phone-prefix">🇮🇳 +91</div>
+              <input class="form-input" type="tel" id="phone-input" placeholder="98765 43210" maxlength="10" autocomplete="tel" />
+            </div>
+          </div>
+          <div id="recaptcha-container"></div>
+          <div class="auth-message" id="phone-msg"></div>
+          <button class="btn btn-primary auth-submit" id="send-otp-btn">Send OTP →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Enter OTP -->
+      <div class="otp-step" id="otp-step">
+        <p class="otp-hint">Enter the 6-digit OTP sent to <strong id="otp-sent-to"></strong></p>
+        <div class="otp-row" role="group" aria-label="OTP digits">
+          <input class="otp-digit" type="tel" maxlength="1" inputmode="numeric" data-index="0" />
+          <input class="otp-digit" type="tel" maxlength="1" inputmode="numeric" data-index="1" />
+          <input class="otp-digit" type="tel" maxlength="1" inputmode="numeric" data-index="2" />
+          <input class="otp-digit" type="tel" maxlength="1" inputmode="numeric" data-index="3" />
+          <input class="otp-digit" type="tel" maxlength="1" inputmode="numeric" data-index="4" />
+          <input class="otp-digit" type="tel" maxlength="1" inputmode="numeric" data-index="5" />
+        </div>
+        <div class="auth-message" id="otp-msg"></div>
+        <button class="btn btn-primary auth-submit" id="verify-otp-btn">Verify & Sign In →</button>
+        <button class="resend-btn" id="resend-btn" disabled>Resend OTP in <span id="resend-timer">30</span>s</button>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <p class="auth-footer">
+      By continuing, you agree to our
+      <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+    </p>
+
+  </div>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>
