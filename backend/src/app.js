@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 
 const corsOptions = require('./config/cors');
 const errorHandler = require('./middleware/errorHandler');
@@ -25,6 +26,7 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // ── Request logging ───────────────────────────────────────────────────────
 // 'dev' format: METHOD /path statusCode responseTime ms
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(cookieParser());
 
 // ── API routes ────────────────────────────────────────────────────────────
 app.use('/api', routes);
