@@ -80,8 +80,15 @@ const logout = async (req, res) => {
   return res.status(204).send();
 };
 
+const me = async (req, res) => {
+  return res.status(200).json({
+    user: req.user,
+  });
+};
+
 module.exports = {
   register,
   login,
   logout,
+  me,
 };
