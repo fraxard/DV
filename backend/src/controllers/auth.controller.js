@@ -32,8 +32,6 @@ const register = async (req, res) => {
   const {
     user,
     session,
-    verificationToken,
-    verificationExpiresAt,
   } = await authService.register({
     name,
     email,
@@ -47,10 +45,10 @@ const register = async (req, res) => {
   };
 
   // Development only.
-  if (process.env.NODE_ENV !== 'production') {
-    response.devVerificationToken = verificationToken;
-    response.devVerificationExpiresAt = verificationExpiresAt;
-  }
+  // if (process.env.NODE_ENV !== 'production') {
+  //   response.devVerificationToken = verificationToken;
+  //   response.devVerificationExpiresAt = verificationExpiresAt;
+  // }
 
   return res.status(201).json(response);
 };
@@ -98,21 +96,17 @@ const verifyEmail = async (req, res) => {
 };
 
 const resendVerification = async (req, res) => {
-  const {
-    user,
-    verificationToken,
-    verificationExpiresAt,
-  } = await authService.resendEmailVerification(req.user.id);
+  await authService.resendEmailVerification(req.user.id);
 
   const response = {
     message: 'Verification email resent.',
   };
 
   // Development only.
-  if (process.env.NODE_ENV !== 'production') {
-    response.devVerificationToken = verificationToken;
-    response.devVerificationExpiresAt = verificationExpiresAt;
-  }
+  // if (process.env.NODE_ENV !== 'production') {
+  //   response.devVerificationToken = verificationToken;
+  //   response.devVerificationExpiresAt = verificationExpiresAt;
+  // }
 
   return res.status(200).json(response);
 };

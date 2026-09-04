@@ -2,9 +2,10 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 const pool = require('../db');
+const { sendVerificationEmail } = require('./email.service');
 
 const SESSION_DURATION_DAYS = 7;
-const EMAIL_VERIFICATION_DURATION_MINUTES = 15;
+const EMAIL_VERIFICATION_DURATION_MINUTES = 10;
 
 const createSession = async (userId) => {
   const sessionId = crypto.randomUUID();
@@ -37,7 +38,7 @@ const createEmailVerificationToken = async (userId) => {
     [userId]
   );
 
-  const token = crypto.randomBytes(32).toString('hex');
+  const token = crypto.randomInt(100000, 1000000).toString();
 
   const tokenHash = crypto
     .createHash('sha256')
@@ -110,6 +111,11 @@ const register = async ({ name, email, password }) => {
   const user = result.rows[0];
 
   const verification = await createEmailVerificationToken(user.id);
+
+  await sendVerificationEmail({
+    email: user.email,
+    token: verification.token,
+  });
 
   const session = await createSession(user.id);
 
@@ -278,6 +284,11 @@ const resendEmailVerification = async (userId) => {
   }
 
   const verification = await createEmailVerificationToken(user.id);
+
+  await sendVerificationEmail({
+    email: user.email,
+    token: verification.token,
+  });
 
   return {
     user,
