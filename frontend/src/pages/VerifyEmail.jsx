@@ -22,7 +22,7 @@ export default function VerifyEmail() {
         const data = JSON.parse(stored);
 
         setEmail(data.email || user?.email || '');
-        
+
         if (data.devVerificationToken) {
           setToken(data.devVerificationToken);
         }
@@ -132,10 +132,16 @@ export default function VerifyEmail() {
             <input
               id="verification-token"
               type="text"
+              inputMode="numeric"
               value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Paste your verification token"
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                setToken(value);
+              }}
+              placeholder="Enter 6-digit OTP"
               autoComplete="one-time-code"
+              maxLength={6}
+              pattern="[0-9]{6}"
               spellCheck="false"
             />
           </div>
