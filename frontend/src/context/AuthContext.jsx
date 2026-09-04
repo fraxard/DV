@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -7,6 +7,7 @@ const API_URL = 'http://localhost:5000/api';
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const authCheckStarted = useRef(false);
 
   const checkAuth = async () => {
     try {
@@ -91,6 +92,10 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
+    // React StrictMode re-runs effects in development. Only bootstrap
+    // authentication once so competing /auth/me requests cannot race.
+    if (authCheckStarted.current) return;
+    authCheckStarted.current = true;
     checkAuth();
   }, []);
 
