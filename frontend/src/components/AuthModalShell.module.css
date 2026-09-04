@@ -1,0 +1,400 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  background: rgba(20, 24, 22, 0.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+.dashboardBackdrop {
+  position: absolute;
+  inset: -24px;
+  z-index: -1;
+  pointer-events: none;
+
+  filter: blur(10px);
+  transform: scale(1.025);
+
+  opacity: 0.72;
+}
+
+.modal {
+  position: relative;
+  width: min(1000px, 94vw);
+  min-height: 590px;
+  max-height: min(720px, 90vh);
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 24px;
+
+  background: rgba(246, 248, 246, 0.92);
+
+  box-shadow:
+    0 35px 90px rgba(24, 29, 26, 0.2),
+    0 8px 28px rgba(24, 29, 26, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  animation: modalIn 0.45s cubic-bezier(.22, 1, .36, 1);
+}
+
+.panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* Form side */
+
+.formPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  padding: 54px 52px;
+
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.formInner {
+  width: 100%;
+  max-width: 390px;
+  margin: 0 auto;
+}
+
+/* Visual side */
+
+.visualPanel {
+  position: relative;
+  overflow: hidden;
+
+  padding: 42px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  color: #f5f7f5;
+
+  background:
+    radial-gradient(
+      circle at 78% 18%,
+      rgba(128, 151, 135, 0.32),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 18% 82%,
+      rgba(91, 113, 99, 0.18),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      #292d2a 0%,
+      #181b19 72%
+    );
+}
+
+.visualGrid {
+  position: absolute;
+  inset: 0;
+
+  opacity: 0.11;
+
+  background:
+    linear-gradient(
+      rgba(255, 255, 255, 0.15) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.15) 1px,
+      transparent 1px
+    );
+
+  background-size: 38px 38px;
+
+  mask-image:
+    radial-gradient(
+      circle at 70% 30%,
+      black,
+      transparent 70%
+    );
+}
+
+.visualGlow {
+  position: absolute;
+
+  width: 260px;
+  height: 260px;
+
+  right: -100px;
+  bottom: -100px;
+
+  border-radius: 50%;
+
+  background: rgba(172, 195, 179, 0.16);
+
+  filter: blur(40px);
+}
+
+.visualContent {
+  position: relative;
+  z-index: 1;
+
+  max-width: 330px;
+}
+
+.visualEyebrow {
+  margin: 0 0 14px;
+
+  color: #aeb7b0;
+
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.visualTitle {
+  margin: 0;
+
+  font-size: clamp(30px, 3.5vw, 46px);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  font-weight: 500;
+}
+
+.visualDescription {
+  margin: 20px 0 0;
+
+  max-width: 290px;
+
+  color: #9ba49d;
+
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.visualFooter {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  color: #8f9891;
+
+  font-size: 9px;
+}
+
+.visualFooterIcon {
+  width: 28px;
+  height: 28px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+
+  background: rgba(255, 255, 255, 0.06);
+
+  color: #c2cbc4;
+}
+
+/* Stage transition */
+
+/* Stage transition */
+.stageForward {
+  grid-template-columns: 1fr 1fr;
+}
+
+.stageForward .formPanel {
+  order: 2;
+  animation: formForward 0.55s cubic-bezier(.22, 1, .36, 1);
+}
+
+.stageForward .visualPanel {
+  order: 1;
+  animation: visualForward 0.55s cubic-bezier(.22, 1, .36, 1);
+}
+
+.stageForward .formPanel,
+.stageForward .visualPanel {
+  transition:
+    transform 0.55s cubic-bezier(.22, 1, .36, 1),
+    opacity 0.55s ease;
+}
+
+/* Close */
+
+.closeButton {
+  position: absolute;
+  z-index: 10;
+
+  top: 18px;
+  right: 18px;
+
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid rgba(30, 35, 32, 0.07);
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.7);
+
+  color: #6f7671;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.closeButton:hover {
+  background: #ffffff;
+  color: #171817;
+  transform: scale(1.04);
+}
+
+/* Responsive */
+
+@media (max-width: 760px) {
+  .root {
+    padding: 16px;
+  }
+
+  .modal {
+    width: 100%;
+    min-height: auto;
+    max-height: 94vh;
+
+    grid-template-columns: 1fr;
+
+    overflow-y: auto;
+  }
+
+  .visualPanel {
+    min-height: 250px;
+    order: -1;
+    padding: 32px;
+  }
+
+  .formPanel {
+    padding: 38px 28px;
+  }
+
+  .visualTitle {
+    font-size: 34px;
+  }
+}
+
+@media (max-height: 700px) and (min-width: 761px) {
+  .modal {
+    min-height: 540px;
+  }
+
+  .formPanel {
+    padding-top: 38px;
+    padding-bottom: 38px;
+  }
+
+  .visualPanel {
+    padding-top: 34px;
+    padding-bottom: 34px;
+  }
+}
+
+/* Animations */
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes formForward {
+  0% {
+    opacity: 0.5;
+    transform: translateX(-24px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes visualForward {
+  0% {
+    opacity: 0.35;
+    transform: translateX(24px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes formBack {
+  0% {
+    opacity: 0.5;
+    transform: translateX(24px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes visualBack {
+  0% {
+    opacity: 0.35;
+    transform: translateX(-24px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal,
+  .stageForward .formPanel,
+  .stageForward .visualPanel,
+  .stageBack .formPanel,
+  .stageBack .visualPanel {
+    animation: none;
+  }
+}

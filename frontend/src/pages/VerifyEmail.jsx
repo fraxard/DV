@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import styles from './VerifyEmail.module.css';
 
-export default function VerifyEmail() {
+export default function VerifyEmail({ onVerified }) {
   const navigate = useNavigate();
   const { user, verifyEmail, resendVerification } = useAuth();
 
@@ -20,14 +20,9 @@ export default function VerifyEmail() {
     if (stored) {
       try {
         const data = JSON.parse(stored);
-
         setEmail(data.email || user?.email || '');
-
-        if (data.devVerificationToken) {
-          setToken(data.devVerificationToken);
-        }
       } catch {
-        // Ignore invalid session storage data.
+        setEmail(user?.email || '');
       }
     } else if (user?.email) {
       setEmail(user.email);
@@ -36,9 +31,9 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     if (user?.email_verified) {
-      navigate('/onboarding', { replace: true });
+      onVerified?.();
     }
-  }, [user, navigate]);
+  }, [user, onVerified]);
 
   const handleVerify = async (e) => {
     e.preventDefault();
@@ -46,8 +41,8 @@ export default function VerifyEmail() {
     setError('');
     setMessage('');
 
-    if (!token.trim()) {
-      setError('Please enter your verification token.');
+    if (token.trim().length !== 6) {
+      setError('Please enter the 6-digit verification code.');
       return;
     }
 
@@ -58,7 +53,11 @@ export default function VerifyEmail() {
 
       sessionStorage.removeItem('dv_pending_verification');
 
-      navigate('/onboarding', { replace: true });
+      if (onVerified) {
+        onVerified();
+      } else {
+        navigate('/onboarding', { replace: true });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -72,27 +71,11 @@ export default function VerifyEmail() {
     setResending(true);
 
     try {
-      const data = await resendVerification();
+      await resendVerification();
 
-      if (data.devVerificationToken) {
-        setToken(data.devVerificationToken);
-
-        sessionStorage.setItem(
-          'dv_pending_verification',
-          JSON.stringify({
-            email: user?.email || email,
-            devVerificationToken: data.devVerificationToken,
-            devVerificationExpiresAt:
-              data.devVerificationExpiresAt || null,
-          })
-        );
-
-        setMessage(
-          'A new development verification token has been generated.'
-        );
-      } else {
-        setMessage('A new verification email has been sent.');
-      }
+      setMessage(
+        'A new verification code has been sent to your email.'
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -101,98 +84,203 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className={styles.root}>
-      <div className={styles.card}>
-        <div className={styles.icon}>
-          ✉
-        </div>
+    <div>
+      <div
+        style={{
+          width: 38,
+          height: 38,
+          display: 'grid',
+          placeItems: 'center',
+          borderRadius: 12,
+          background: '#eef2ef',
+          color: '#596c60',
+          marginBottom: 20,
+        }}
+      >
+        <Mail size={18} strokeWidth={1.8} />
+      </div>
 
-        <div className={styles.header}>
-          <p className={styles.eyebrow}>DigiVirasat</p>
-          <h1>Verify your email</h1>
-          <p>
-            We need to verify your email before you can finish setting up
-            your DigiVirasat account.
-          </p>
-        </div>
+      <p
+        style={{
+          margin: '0 0 8px',
+          color: '#8b918d',
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: '.14em',
+        }}
+      >
+        STEP 01 / VERIFICATION
+      </p>
 
-        {email && (
-          <div className={styles.emailBox}>
-            <span>Verification email</span>
-            <strong>{email}</strong>
+      <h1
+        style={{
+          margin: 0,
+          fontSize: 30,
+          lineHeight: 1,
+          letterSpacing: '-.045em',
+          fontWeight: 600,
+          color: '#171817',
+        }}
+      >
+        Verify your email
+      </h1>
+
+      <p
+        style={{
+          margin: '14px 0 22px',
+          maxWidth: 350,
+          color: '#777e79',
+          fontSize: 11,
+          lineHeight: 1.65,
+        }}
+      >
+        We've sent a 6-digit verification code to your email.
+      </p>
+
+      {email && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 9,
+            marginBottom: 22,
+            padding: '10px 12px',
+            border: '1px solid rgba(28,32,29,.07)',
+            borderRadius: 11,
+            background: '#f5f7f5',
+            color: '#59625c',
+            fontSize: 10,
+          }}
+        >
+          <Mail size={13} />
+
+          <strong style={{ fontWeight: 650 }}>
+            {email}
+          </strong>
+        </div>
+      )}
+
+      <form onSubmit={handleVerify}>
+        <label
+          htmlFor="verification-token"
+          style={{
+            display: 'block',
+            marginBottom: 7,
+            color: '#59605b',
+            fontSize: 10,
+            fontWeight: 650,
+          }}
+        >
+          Verification code
+        </label>
+
+        <input
+          id="verification-token"
+          type="text"
+          inputMode="numeric"
+          value={token}
+          onChange={(e) => {
+            const value = e.target.value
+              .replace(/\D/g, '')
+              .slice(0, 6);
+
+            setToken(value);
+          }}
+          placeholder="000000"
+          autoComplete="one-time-code"
+          maxLength={6}
+          pattern="[0-9]{6}"
+          spellCheck="false"
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            height: 52,
+            padding: '0 16px',
+            border: '1px solid rgba(28,32,29,.1)',
+            borderRadius: 12,
+            outline: 'none',
+            background: '#fafbfa',
+            color: '#171817',
+            fontSize: 20,
+            fontWeight: 650,
+            letterSpacing: '.28em',
+          }}
+        />
+
+        {error && (
+          <div
+            role="alert"
+            style={{
+              marginTop: 10,
+              padding: '9px 11px',
+              borderRadius: 10,
+              background: '#fff2f0',
+              color: '#b42318',
+              fontSize: 10,
+              lineHeight: 1.5,
+            }}
+          >
+            {error}
           </div>
         )}
 
-        <form onSubmit={handleVerify} className={styles.form}>
-          <div className={styles.field}>
-            <label htmlFor="verification-token">
-              Verification token
-            </label>
-
-            <input
-              id="verification-token"
-              type="text"
-              inputMode="numeric"
-              value={token}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '');
-                setToken(value);
-              }}
-              placeholder="Enter 6-digit OTP"
-              autoComplete="one-time-code"
-              maxLength={6}
-              pattern="[0-9]{6}"
-              spellCheck="false"
-            />
-          </div>
-
-          {error && (
-            <div className={styles.error} role="alert">
-              {error}
-            </div>
-          )}
-
-          {message && (
-            <div className={styles.message}>
-              {message}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className={styles.primaryBtn}
-            disabled={submitting}
+        {message && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginTop: 10,
+              color: '#5d7664',
+              fontSize: 10,
+            }}
           >
-            {submitting ? 'Verifying…' : 'Verify email'}
-          </button>
-        </form>
-
-        <div className={styles.devNotice}>
-          <strong>Development mode</strong>
-          <span>
-            Your verification token is automatically loaded above.
-            In production this will be replaced by an email verification
-            code/link.
-          </span>
-        </div>
+            <CheckCircle2 size={12} />
+            {message}
+          </div>
+        )}
 
         <button
-          type="button"
-          className={styles.resendBtn}
-          onClick={handleResend}
-          disabled={resending}
+          type="submit"
+          disabled={submitting}
+          style={{
+            width: '100%',
+            height: 44,
+            marginTop: 18,
+            border: 0,
+            borderRadius: 10,
+            background: '#202321',
+            color: '#fff',
+            fontSize: 10,
+            fontWeight: 700,
+            cursor: submitting ? 'default' : 'pointer',
+            opacity: submitting ? 0.65 : 1,
+          }}
         >
-          {resending ? 'Generating new token…' : 'Resend verification'}
+          {submitting ? 'Verifying…' : 'Verify email'}
         </button>
+      </form>
 
-        <button
-          type="button"
-          className={styles.backBtn}
-          onClick={() => navigate('/login')}
-        >
-          Back to sign in
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={handleResend}
+        disabled={resending}
+        style={{
+          width: '100%',
+          marginTop: 12,
+          padding: 0,
+          border: 0,
+          background: 'transparent',
+          color: '#68716b',
+          fontSize: 10,
+          fontWeight: 650,
+          cursor: resending ? 'default' : 'pointer',
+        }}
+      >
+        {resending
+          ? 'Sending new code…'
+          : 'Resend verification code'}
+      </button>
     </div>
   );
 }
