@@ -20,10 +20,9 @@ export default function AuthModalShell({
             </div>
 
             <div
-    className={`${styles.modal} ${
-        stage === 'profile' ? styles.stageForward : ''
-    }`}
->
+                className={`${styles.modal} ${stage === 'profile' ? styles.stageForward : ''
+                    }`}
+            >
                 {onClose && (
                     <button
                         type="button"
