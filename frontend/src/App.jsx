@@ -9,6 +9,8 @@ import WorkspacePage from './pages/WorkspacePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import VerifyEmail from './pages/VerifyEmail';
+import Onboarding from './pages/Onboarding';
+import LifecycleRoute from './components/LifecycleRoute';
 
 function AuthRedirect() {
   const location = useLocation();
@@ -29,8 +31,14 @@ export default function App() {
           <Route path="/register" element={<Register />} />
         </Route>
 
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        
+        <Route element={<LifecycleRoute stage="verify-email" />}>
+          <Route path="/verify-email" element={<VerifyEmail />} />
+        </Route>
+
+        <Route element={<LifecycleRoute stage="onboarding" />}>
+          <Route path="/onboarding" element={<Onboarding />} />
+        </Route>
+
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/vault" element={<WorkspacePage section="vault" />} />

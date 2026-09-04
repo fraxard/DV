@@ -9,9 +9,17 @@ export default function PublicRoute() {
     return <p>Loading...</p>;
   }
 
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
+  if (!user) {
+    return <Outlet />;
   }
 
-  return <Outlet />;
+  if (!user.email_verified) {
+    return <Navigate to="/verify-email" replace />;
+  }
+
+  if (!user.onboarding_completed) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
 }

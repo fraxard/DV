@@ -13,5 +13,13 @@ export default function ProtectedRoute() {
     return <Navigate to="/login" replace />;
   }
 
+  if (!user.email_verified) {
+    return <Navigate to="/verify-email" replace />;
+  }
+
+  if (!user.onboarding_completed) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return <Outlet />;
 }
