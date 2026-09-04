@@ -20,14 +20,14 @@ export default function Onboarding() {
     setSubmitting(true);
 
     try {
-    await completeOnboarding({
-  name,
-  dateOfBirth: dob,
-  phone,
-  country,
-});
+      await completeOnboarding({
+        name,
+        dateOfBirth: dob,
+        phone,
+        country,
+      });
 
-navigate('/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
