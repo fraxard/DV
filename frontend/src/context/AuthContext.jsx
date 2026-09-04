@@ -119,6 +119,39 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const completeOnboarding = async ({
+    name,
+    dateOfBirth,
+    phone,
+    country,
+  }) => {
+    const response = await fetch(`${API_URL}/auth/onboarding`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        name,
+        dateOfBirth,
+        phone,
+        country,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message || 'Failed to complete onboarding.'
+      );
+    }
+
+    setUser(data.user);
+
+    return data.user;
+  };
+
   const logout = async () => {
     try {
       await fetch(`${API_URL}/auth/logout`, {
@@ -146,6 +179,7 @@ export function AuthProvider({ children }) {
         register,
         verifyEmail,
         resendVerification,
+        completeOnboarding,
         logout,
         checkAuth,
       }}

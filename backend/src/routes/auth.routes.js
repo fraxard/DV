@@ -8,6 +8,12 @@ router.post('/login', authController.login);
 
 router.post('/verify-email', authController.verifyEmail);
 
+router.put(
+  '/onboarding',
+  requireAuth,
+  authController.completeOnboarding
+);
+
 router.post(
   '/resend-verification',
   requireAuth,

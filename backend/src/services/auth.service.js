@@ -298,10 +298,58 @@ const logout = async (sessionId) => {
   );
 };
 
+const completeOnboarding = async ({
+  userId,
+  name,
+  dateOfBirth,
+  phone,
+  country,
+}) => {
+  const result = await pool.query(
+    `
+      UPDATE users
+      SET
+        name = $1,
+        date_of_birth = $2,
+        phone = $3,
+        country = $4,
+        onboarding_completed = true,
+        updated_at = current_timestamp
+      WHERE id = $5
+      RETURNING
+        id,
+        email,
+        name,
+        email_verified,
+        onboarding_completed,
+        date_of_birth,
+        phone,
+        country,
+        created_at
+    `,
+    [
+      name.trim(),
+      dateOfBirth,
+      phone.trim(),
+      country.trim(),
+      userId,
+    ]
+  );
+
+  if (result.rows.length === 0) {
+    const error = new Error('User not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return result.rows[0];
+};
+
 module.exports = {
   register,
   login,
   logout,
   verifyEmail,
   resendEmailVerification,
+  completeOnboarding,
 };

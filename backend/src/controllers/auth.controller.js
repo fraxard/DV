@@ -138,6 +138,36 @@ const me = async (req, res) => {
   });
 };
 
+const completeOnboarding = async (req, res) => {
+  const {
+    name,
+    dateOfBirth,
+    phone,
+    country,
+  } = req.body;
+
+  if (!name || !dateOfBirth || !phone || !country) {
+    return res.status(400).json({
+      error: {
+        message: 'Name, date of birth, phone, and country are required.',
+      },
+    });
+  }
+
+  const user = await authService.completeOnboarding({
+    userId: req.user.id,
+    name,
+    dateOfBirth,
+    phone,
+    country,
+  });
+
+  return res.status(200).json({
+    message: 'Onboarding completed successfully.',
+    user,
+  });
+};
+
 module.exports = {
   register,
   login,
@@ -145,4 +175,5 @@ module.exports = {
   resendVerification,
   logout,
   me,
+  completeOnboarding,
 };

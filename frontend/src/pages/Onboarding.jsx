@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, completeOnboarding } = useAuth();
 
   const [name, setName] = useState(user?.name || '');
   const [dob, setDob] = useState('');
@@ -20,16 +20,14 @@ export default function Onboarding() {
     setSubmitting(true);
 
     try {
-      // Temporary until the onboarding API endpoint is added.
-      // We will wire this to the backend next.
-      console.log({
-        name,
-        dob,
-        phone,
-        country,
-      });
+    await completeOnboarding({
+  name,
+  dateOfBirth: dob,
+  phone,
+  country,
+});
 
-      navigate('/dashboard', { replace: true });
+navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
