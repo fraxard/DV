@@ -29,7 +29,12 @@ const register = async (req, res) => {
     });
   }
 
-  const { user, session } = await authService.register({
+  const {
+    user,
+    session,
+    verificationToken,
+    verificationExpiresAt,
+  } = await authService.register({
     name,
     email,
     password,
@@ -37,9 +42,17 @@ const register = async (req, res) => {
 
   setSessionCookie(res, session.id, session.expiresAt);
 
-  return res.status(201).json({
+  const response = {
     user,
-  });
+  };
+
+  // Development only.
+  if (process.env.NODE_ENV !== 'production') {
+    response.devVerificationToken = verificationToken;
+    response.devVerificationExpiresAt = verificationExpiresAt;
+  }
+
+  return res.status(201).json(response);
 };
 
 const login = async (req, res) => {
@@ -63,6 +76,45 @@ const login = async (req, res) => {
   return res.status(200).json({
     user,
   });
+};
+
+const verifyEmail = async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({
+      error: {
+        message: 'Verification token is required.',
+      },
+    });
+  }
+
+  const user = await authService.verifyEmail(token);
+
+  return res.status(200).json({
+    message: 'Email verified successfully.',
+    user,
+  });
+};
+
+const resendVerification = async (req, res) => {
+  const {
+    user,
+    verificationToken,
+    verificationExpiresAt,
+  } = await authService.resendEmailVerification(req.user.id);
+
+  const response = {
+    message: 'Verification email resent.',
+  };
+
+  // Development only.
+  if (process.env.NODE_ENV !== 'production') {
+    response.devVerificationToken = verificationToken;
+    response.devVerificationExpiresAt = verificationExpiresAt;
+  }
+
+  return res.status(200).json(response);
 };
 
 const logout = async (req, res) => {
@@ -89,6 +141,8 @@ const me = async (req, res) => {
 module.exports = {
   register,
   login,
+  verifyEmail,
+  resendVerification,
   logout,
   me,
 };

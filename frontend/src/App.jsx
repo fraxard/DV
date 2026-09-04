@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import WorkspacePage from './pages/WorkspacePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import VerifyEmail from './pages/VerifyEmail';
 
 function AuthRedirect() {
   const location = useLocation();
@@ -28,6 +29,8 @@ export default function App() {
           <Route path="/register" element={<Register />} />
         </Route>
 
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/vault" element={<WorkspacePage section="vault" />} />

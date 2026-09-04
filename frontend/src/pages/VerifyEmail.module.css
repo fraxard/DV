@@ -1,0 +1,202 @@
+.root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background: var(--color-bg, #f7f7f5);
+}
+
+.card {
+  width: min(100%, 460px);
+  padding: 38px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+}
+
+.icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+  border-radius: 10px;
+  background: var(--color-surface-alt, #f1f1ee);
+  font-size: 22px;
+}
+
+.eyebrow {
+  margin: 0 0 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted, #777);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 27px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: var(--color-text, #171717);
+}
+
+.header p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-muted, #6d6d6d);
+}
+
+.emailBox {
+  margin-top: 24px;
+  padding: 13px 15px;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 8px;
+  background: var(--color-bg, #f8f8f6);
+}
+
+.emailBox span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--color-muted, #777);
+}
+
+.emailBox strong {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--color-text, #222);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form {
+  margin-top: 24px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text, #222);
+}
+
+.field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 13px;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 7px;
+  outline: none;
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #222);
+  font: inherit;
+  font-size: 13px;
+}
+
+.field input:focus {
+  border-color: var(--color-primary, #222);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.error,
+.message {
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.error {
+  color: #a33;
+  background: #fff3f3;
+  border: 1px solid #f0d4d4;
+}
+
+.message {
+  color: #356b48;
+  background: #f1f8f3;
+  border: 1px solid #d5e9da;
+}
+
+.primaryBtn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--color-text, #181818);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryBtn:disabled,
+.resendBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.devNotice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 7px;
+  background: #faf7ed;
+  border: 1px solid #eee4c9;
+}
+
+.devNotice strong {
+  font-size: 11px;
+  color: #765f25;
+}
+
+.devNotice span {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #8a7b55;
+}
+
+.resendBtn,
+.backBtn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.resendBtn {
+  margin-top: 18px;
+  color: var(--color-text, #222);
+  font-weight: 600;
+}
+
+.backBtn {
+  margin-top: 12px;
+  color: var(--color-muted, #777);
+}
+
+.resendBtn:hover,
+.backBtn:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 520px) {
+  .card {
+    padding: 28px 22px;
+  }
+}

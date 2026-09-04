@@ -38,10 +38,7 @@ export function AuthProvider({ children }) {
         'Content-Type': 'application/json',
       },
       credentials: 'include',
-      body: JSON.stringify({
-        email,
-        password,
-      }),
+      body: JSON.stringify({ email, password }),
     });
 
     const data = await response.json();
@@ -77,7 +74,49 @@ export function AuthProvider({ children }) {
 
     setUser(data.user);
 
+    // Return the complete response so the verification flow
+    // can access the development token.
+    return data;
+  };
+
+  const verifyEmail = async (token) => {
+    const response = await fetch(`${API_URL}/auth/verify-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ token }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message || 'Email verification failed.'
+      );
+    }
+
+    setUser(data.user);
+
     return data.user;
+  };
+
+  const resendVerification = async () => {
+    const response = await fetch(`${API_URL}/auth/resend-verification`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message || 'Could not resend verification.'
+      );
+    }
+
+    return data;
   };
 
   const logout = async () => {
@@ -92,9 +131,8 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    // React StrictMode re-runs effects in development. Only bootstrap
-    // authentication once so competing /auth/me requests cannot race.
     if (authCheckStarted.current) return;
+
     authCheckStarted.current = true;
     checkAuth();
   }, []);
@@ -106,6 +144,8 @@ export function AuthProvider({ children }) {
         loading,
         login,
         register,
+        verifyEmail,
+        resendVerification,
         logout,
         checkAuth,
       }}
