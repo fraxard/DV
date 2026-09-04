@@ -80,15 +80,26 @@
   width: 36px;
   height: 36px;
   margin-bottom: 9px;
-  border-radius: 11px;
   display: grid;
   place-items: center;
+  border-radius: 11px;
   background: #202321;
-  color: #fff;
+  color: #ffffff;
+  text-decoration: none;
   font-size: 10px;
+  line-height: 1;
   font-weight: 750;
-  letter-spacing: -.03em;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 7px 16px rgba(0,0,0,.12);
+  letter-spacing: -0.03em;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 7px 16px rgba(0,0,0,.12);
+}
+.logoMark,
+.logoMark:hover,
+.logoMark:focus,
+.logoMark:visited {
+  color: #ffffff;
+  text-decoration: none;
 }
 
 .railButton {
@@ -823,7 +834,8 @@
   margin-top: 14px;
 }
 
-.quickGrid button {
+.quickGrid button,
+.quickGrid a {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -838,12 +850,14 @@
   text-align: left;
 }
 
-.quickGrid button:hover {
+.quickGrid button:hover,
+.quickGrid a:hover {
   background: #edf1ed;
   color: #202420;
 }
 
-.quickGrid button span {
+.quickGrid button span,
+.quickGrid a span {
   width: 20px;
   height: 20px;
   flex: 0 0 20px;
@@ -1139,71 +1153,148 @@
 }
 
 /* Floating navbar */
+/* =========================================================
+   FLOATING NAVIGATION
+   ========================================================= */
+
+/* =========================================================
+   FLOATING NAV — SHARED VISUAL SPEC
+   ========================================================= */
+
 .bottomFloatingNav {
   position: fixed;
-  z-index: 50;
+  z-index: 100;
+
   left: 50%;
-  bottom: 18px;
+  bottom: 14px;
+
   transform: translateX(-50%);
+
+  display: flex;
+  align-items: center;
+
+  width: max-content;
+  max-width: calc(100vw - 24px);
+
   padding: 5px;
-  border: 1px solid rgba(255,255,255,.11);
-  border-radius: 18px;
-  background: rgba(27,29,28,.94);
+
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 5px;
+
+  background: rgba(27, 29, 28, 0.96);
+
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
   backdrop-filter: blur(18px);
-  box-shadow: 0 15px 38px rgba(20,24,21,.2), inset 0 1px 0 rgba(255,255,255,.06);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .navMenu {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+
   white-space: nowrap;
 }
 
 .navLogo {
-  padding: 0 10px;
-  color: #f7f8f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 28px;
+  padding: 0;
+
+  border-radius: 5px;
+
+  color: #f4f6f4 !important;
+  text-decoration: none !important;
+
   font-size: 10px;
-  font-weight: 750;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.navLogo:hover,
+.navLogo:focus,
+.navLogo:visited {
+  color: #ffffff !important;
+  text-decoration: none !important;
 }
 
 .navItem,
-.navItemActive,
-.signOutBtn {
+.navItemActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 28px;
+  padding: 0 10px;
+
   border: 0;
-  border-radius: 11px;
-  padding: 7px 10px;
-  font-size: 8px;
-  font-weight: 600;
+  border-radius: 5px;
+
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 550;
+
+  text-decoration: none;
   cursor: pointer;
-  transition: .2s ease;
+
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
 }
 
 .navItem {
+  color: #929993 !important;
   background: transparent;
-  color: #858b87;
 }
 
 .navItem:hover {
-  color: #fff;
-  background: rgba(255,255,255,.07);
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .navItemActive {
-  color: #fff;
-  background: #353936;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.13);
 }
 
 .signOutBtn {
-  margin-left: 2px;
-  background: #2b2e2c;
-  color: #c7cbc8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 28px;
+  padding: 0 11px;
+
+  border: 0;
+  border-radius: 5px;
+
+  color: #e7ebe8 !important;
+  background: rgba(255, 255, 255, 0.08);
+
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
 }
 
 .signOutBtn:hover {
-  background: #404441;
-  color: #fff;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* Responsive */
@@ -1343,4 +1434,254 @@
   .signOutBtn {
     padding: 7px 8px;
   }
+}
+
+.dashboardContainer a { color: inherit; text-decoration: none; }
+.logoMark, .railButton, .profileIcon, .darkAction, .textAction,
+.todoRow, .quickGrid a, .financeCard, .activityCard, .navLogo, .navItem, .navItemActive {
+  text-decoration: none;
+}
+/* =========================================================
+   CONTRAST / VISIBILITY FIX
+   Keeps the dark aesthetic while making every dark component
+   readable and polished.
+   ========================================================= */
+
+/* Dark hero — force all direct content to stay readable */
+.heroCard,
+.heroCard * {
+  color: inherit;
+}
+
+.heroCard .cardKicker {
+  color: #aeb7b0;
+}
+
+.heroCard h2 {
+  color: #f5f7f5;
+}
+
+.heroCard p {
+  color: #b5bdb7;
+}
+
+.heroCard strong {
+  color: #f5f7f5;
+}
+
+.heroCard small,
+.heroCard span {
+  color: #aeb7b0;
+}
+
+.heroCard .heroScoreRow strong span {
+  color: #aeb7b0;
+}
+
+.heroCard .heroScoreRow div span {
+  color: #dce3de;
+}
+
+.heroCard .heroFooter strong {
+  color: #f5f7f5;
+}
+
+.heroCard .heroFooter span {
+  color: #969f99;
+}
+
+/* Dark hero action */
+.heroCard .darkAction,
+.readinessCard .darkAction {
+  color: #f4f6f4;
+  background: #252925;
+  border-color: rgba(255,255,255,.14);
+}
+
+.heroCard .darkAction svg,
+.readinessCard .darkAction svg {
+  color: #dfe5e0;
+  stroke: currentColor;
+}
+
+.heroCard .darkAction:hover,
+.readinessCard .darkAction:hover {
+  color: #ffffff;
+  background: #343934;
+}
+
+/* =========================================================
+   FLOATING NAVBAR
+   ========================================================= */
+
+.bottomFloatingNav {
+  color: #dfe4e0;
+}
+
+.navLogo {
+  color: #f7f9f7;
+  text-decoration: none;
+}
+
+.navItem,
+.navItemActive,
+.signOutBtn {
+  font-family: inherit;
+  line-height: 1;
+}
+
+.navItem {
+  color: #aeb5b0;
+  background: transparent;
+  text-decoration: none;
+}
+
+.navItem:hover {
+  color: #ffffff;
+  background: rgba(255,255,255,.09);
+}
+
+.navItemActive {
+  color: #ffffff;
+  background: #3b403c;
+}
+
+.signOutBtn {
+  color: #d8ddd9;
+  background: #303431;
+}
+
+.signOutBtn:hover {
+  color: #ffffff;
+  background: #454a46;
+}
+
+/* Make icons inside navigation inherit the readable color */
+.bottomFloatingNav svg {
+  color: currentColor;
+  stroke: currentColor;
+}
+
+/* =========================================================
+   DARK COMPONENTS — generic safety net
+   ========================================================= */
+
+.heroCard button,
+.heroCard a {
+  color: inherit;
+}
+
+.heroCard button svg,
+.heroCard a svg {
+  stroke: currentColor;
+}
+
+/* =========================================================
+   LIGHT CARDS — prevent inherited dark-theme styles
+   from making text disappear.
+   ========================================================= */
+
+.card:not(.heroCard) {
+  color: #171817;
+}
+
+.card:not(.heroCard) h3,
+.card:not(.heroCard) strong {
+  color: #252925;
+}
+
+.card:not(.heroCard) p {
+  color: #747c76;
+}
+
+.card:not(.heroCard) svg {
+  color: #626b64;
+  stroke: currentColor;
+}
+
+/* Activity card */
+.activityCard,
+.activityCard * {
+  color: inherit;
+}
+
+.activityCard strong {
+  color: #292e2a;
+}
+
+.activityCard span,
+.activityCard time {
+  color: #8a918c;
+}
+
+/* Calendar */
+.calendarCard button {
+  color: #5e655f;
+}
+
+.calendarCard .dayToday {
+  color: #ffffff;
+}
+
+/* Todo / attention */
+.todoRow strong {
+  color: #303631;
+}
+
+.todoRow div span {
+  color: #8b928d;
+}
+
+.todoArrow {
+  color: #9ba29d;
+}
+
+/* Quick actions */
+.quickGrid button {
+  color: #59615b;
+}
+
+.quickGrid button span {
+  color: #5f6e63;
+}
+
+.quickGrid button:hover {
+  color: #202420;
+}
+
+/* =========================================================
+   READINESS CARD
+   ========================================================= */
+
+.readinessCard {
+  color: #242925;
+}
+
+.readinessCard h3 {
+  color: #242925;
+}
+
+.readinessCard p {
+  color: #7d847f;
+}
+
+.readinessChecklist span {
+  color: #626a64;
+}
+
+.readinessChecklist .pendingItem {
+  color: #969d98;
+}
+
+/* =========================================================
+   LINKS
+   ========================================================= */
+
+.activityCard {
+  color: inherit;
+  text-decoration: none;
+}
+
+.activityCard:hover {
+  color: inherit;
 }

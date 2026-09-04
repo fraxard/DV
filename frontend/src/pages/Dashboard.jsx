@@ -1,22 +1,21 @@
 import React, { useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   Bell,
   CalendarDays,
   Check,
   ChevronLeft,
   ChevronRight,
-  CircleUserRound,
   Clock3,
   FileText,
   FolderOpen,
-  Gem,
   Home,
   KeyRound,
   Landmark,
   LayoutDashboard,
   ListChecks,
   Plus,
-  Settings,
   ShieldCheck,
   Sparkles,
   TrendingUp,
@@ -76,12 +75,21 @@ function buildCalendar(year, month) {
 }
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const now = new Date();
   const [calendarDate, setCalendarDate] = useState(
     new Date(now.getFullYear(), now.getMonth(), 1)
   );
   const [selectedDay, setSelectedDay] = useState(now.getDate());
-  const [activeNav, setActiveNav] = useState('Home');
+  const location = useLocation();
+  const activeNav = location.pathname === '/dashboard' ? 'Home'
+    : location.pathname.startsWith('/vault') ? 'Vault'
+      : location.pathname.startsWith('/nominees') ? 'Nominees'
+        : location.pathname.startsWith('/activity') ? 'Activity'
+          : location.pathname.startsWith('/documents') ? 'Documents'
+            : location.pathname.startsWith('/settings') ? 'Settings'
+              : 'Home';
 
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
@@ -104,52 +112,52 @@ const Dashboard = () => {
       {/* Compact workspace rail */}
       <aside className={styles.sidebar} aria-label="Workspace navigation">
         <div className={styles.sidebarTop}>
-          <div className={styles.logoMark}>DV</div>
+          <Link className={styles.logoMark} to="/dashboard" aria-label="DigiVirasat dashboard">DV</Link>
 
-          <button
+          <Link
             className={`${styles.railButton} ${activeNav === 'Home' ? styles.railButtonActive : ''}`}
-            onClick={() => setActiveNav('Home')}
+            to="/dashboard"
             aria-label="Home"
           >
             <LayoutDashboard size={15} strokeWidth={1.8} />
-          </button>
-          <button
+          </Link>
+          <Link
             className={`${styles.railButton} ${activeNav === 'Vault' ? styles.railButtonActive : ''}`}
-            onClick={() => setActiveNav('Vault')}
+            to="/vault"
             aria-label="Vault"
           >
             <FolderOpen size={15} strokeWidth={1.8} />
-          </button>
-          <button
+          </Link>
+          <Link
             className={`${styles.railButton} ${activeNav === 'Nominees' ? styles.railButtonActive : ''}`}
-            onClick={() => setActiveNav('Nominees')}
+            to="/nominees"
             aria-label="Nominees"
           >
             <UsersRound size={15} strokeWidth={1.8} />
-          </button>
-          <button
+          </Link>
+          <Link
             className={`${styles.railButton} ${activeNav === 'Activity' ? styles.railButtonActive : ''}`}
-            onClick={() => setActiveNav('Activity')}
+            to="/activity"
             aria-label="Activity"
           >
             <ListChecks size={15} strokeWidth={1.8} />
-          </button>
-          <button
+          </Link>
+          <Link
             className={`${styles.railButton} ${activeNav === 'Documents' ? styles.railButtonActive : ''}`}
-            onClick={() => setActiveNav('Documents')}
+            to="/documents"
             aria-label="Documents"
           >
             <FileText size={15} strokeWidth={1.8} />
-          </button>
+          </Link>
         </div>
 
         <div className={styles.sidebarBottom}>
-          <button className={styles.railButton} aria-label="Notifications">
+          <Link className={styles.railButton} to="/activity" aria-label="Notifications">
             <Bell size={15} strokeWidth={1.8} />
-          </button>
-          <button className={styles.profileIcon} aria-label="Profile">
-            A
-          </button>
+          </Link>
+          <Link className={styles.profileIcon} to="/settings" aria-label="Profile">
+            {(user?.full_name || user?.name || 'A').charAt(0).toUpperCase()}
+          </Link>
         </div>
       </aside>
 
@@ -195,7 +203,7 @@ const Dashboard = () => {
               <div><strong>24</strong><span>assets</span></div>
               <div><strong>06</strong><span>categories</span></div>
               <div><strong>02</strong><span>nominees</span></div>
-              <button className={styles.darkAction}>Continue <ChevronRight size={12} /></button>
+              <Link className={styles.darkAction} to="/vault">Continue <ChevronRight size={12} /></Link>
             </div>
           </section>
 
@@ -228,7 +236,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <button className={styles.textAction}><Plus size={12} /> Add nominee</button>
+            <Link className={styles.textAction} to="/nominees?new=1"><Plus size={12} /> Add nominee</Link>
           </section>
 
           {/* Calendar */}
@@ -293,16 +301,23 @@ const Dashboard = () => {
             </div>
 
             <div className={styles.todoList}>
-              {todayItems.map((item) => (
-                <div className={styles.todoRow} key={item.title}>
-                  <span className={styles.todoCheck}>{item.done ? <Check size={11} /> : ''}</span>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.meta}</span>
-                  </div>
-                  <ChevronRight size={12} className={styles.todoArrow} />
-                </div>
-              ))}
+              {todayItems.map((item) => {
+                const target = item.meta === 'Nominees'
+                  ? '/nominees'
+                  : item.meta === 'Protection'
+                    ? '/vault'
+                    : '/documents';
+                return (
+                  <Link className={styles.todoRow} to={target} key={item.title}>
+                    <span className={styles.todoCheck}>{item.done ? <Check size={11} /> : ''}</span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span>{item.meta}</span>
+                    </div>
+                    <ChevronRight size={12} className={styles.todoArrow} />
+                  </Link>
+                );
+              })}
             </div>
 
             <div className={styles.cardFooterNote}>
@@ -331,7 +346,7 @@ const Dashboard = () => {
               ))}
             </div>
 
-            <button className={styles.textAction}>View all assets <ChevronRight size={12} /></button>
+            <Link className={styles.textAction} to="/vault">View all assets <ChevronRight size={12} /></Link>
           </section>
 
           {/* Vault Health */}
@@ -370,15 +385,15 @@ const Dashboard = () => {
             </div>
 
             <div className={styles.quickGrid}>
-              <button><span><WalletCards size={13} /></span>Add asset</button>
-              <button><span><UsersRound size={13} /></span>Add nominee</button>
-              <button><span><Upload size={13} /></span>Upload doc</button>
-              <button><span><CalendarDays size={13} /></span>Add date</button>
+              <Link to="/vault?new=asset"><span><WalletCards size={13} /></span>Add asset</Link>
+              <Link to="/nominees?new=1"><span><UsersRound size={13} /></span>Add nominee</Link>
+              <Link to="/documents?upload=1"><span><Upload size={13} /></span>Upload doc</Link>
+              <Link to="/calendar?new=1"><span><CalendarDays size={13} /></span>Add date</Link>
             </div>
           </section>
 
           {/* Financial overview */}
-          <section className={`${styles.card} ${styles.financeCard}`}>
+          <Link className={`${styles.card} ${styles.financeCard}`} to="/vault?category=financial">
             <div className={styles.cardTop}>
               <div>
                 <span className={styles.cardKicker}>OVERVIEW</span>
@@ -404,10 +419,10 @@ const Dashboard = () => {
               <span style={{ width: '33%' }} />
               <span style={{ width: '17%' }} />
             </div>
-          </section>
+          </Link>
 
           {/* Activity */}
-          <section className={`${styles.card} ${styles.activityCard}`}>
+          <Link className={`${styles.card} ${styles.activityCard}`} to="/activity">
             <div className={styles.cardTop}>
               <div>
                 <span className={styles.cardKicker}>TIMELINE</span>
@@ -428,10 +443,10 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
-          </section>
+          </Link>
 
           {/* Smaller category cards */}
-          <section className={`${styles.card} ${styles.smallInfoCard} ${styles.documentsCard}`}>
+          <Link to="/documents" className={`${styles.card} ${styles.smallInfoCard} ${styles.documentsCard}`}>
             <div className={styles.cardTop}>
               <div><span className={styles.cardKicker}>ARCHIVE</span><h3>Documents</h3></div>
               <FileText size={14} className={styles.mutedIcon} />
@@ -442,9 +457,9 @@ const Dashboard = () => {
               <span>Legal <b>02</b></span>
               <span>Financial <b>03</b></span>
             </div>
-          </section>
+          </Link>
 
-          <section className={`${styles.card} ${styles.smallInfoCard} ${styles.protectionCard}`}>
+          <Link to="/vault?category=insurance" className={`${styles.card} ${styles.smallInfoCard} ${styles.protectionCard}`}>
             <div className={styles.cardTop}>
               <div><span className={styles.cardKicker}>PROTECTION</span><h3>Coverage</h3></div>
               <ShieldCheck size={14} className={styles.mutedIcon} />
@@ -452,9 +467,9 @@ const Dashboard = () => {
             <strong className={styles.bigSmallNumber}>82<span>%</span></strong>
             <div className={styles.thinProgress}><span style={{ width: '82%' }} /></div>
             <span className={styles.smallMuted}>3 policies · 2 contacts</span>
-          </section>
+          </Link>
 
-          <section className={`${styles.card} ${styles.smallInfoCard} ${styles.digitalCard}`}>
+          <Link to="/vault?category=digital" className={`${styles.card} ${styles.smallInfoCard} ${styles.digitalCard}`}>
             <div className={styles.cardTop}>
               <div><span className={styles.cardKicker}>DIGITAL</span><h3>Online legacy</h3></div>
               <KeyRound size={14} className={styles.mutedIcon} />
@@ -465,7 +480,7 @@ const Dashboard = () => {
               <span>Passwords <b>08</b></span>
               <span>Domains <b>03</b></span>
             </div>
-          </section>
+          </Link>
 
           {/* Legacy readiness */}
           <section className={`${styles.card} ${styles.readinessCard}`}>
@@ -484,7 +499,7 @@ const Dashboard = () => {
               <span className={styles.pendingItem}>○ Personal message</span>
             </div>
 
-            <button className={styles.darkAction}>Continue organising <ChevronRight size={12} /></button>
+            <Link className={styles.darkAction} to="/vault">Continue organising <ChevronRight size={12} /></Link>
           </section>
         </div>
 
@@ -497,17 +512,31 @@ const Dashboard = () => {
       {/* Existing floating navigation stays */}
       <div className={styles.bottomFloatingNav}>
         <div className={styles.navMenu}>
-          <div className={styles.navLogo}>DV.</div>
-          {['Home', 'Vault', 'Nominees', 'Activity', 'Settings'].map((item) => (
-            <button
+          <Link className={styles.navLogo} to="/dashboard">DV.</Link>
+          {[
+            ['Home', '/dashboard'],
+            ['Vault', '/vault'],
+            ['Nominees', '/nominees'],
+            ['Activity', '/activity'],
+            ['Settings', '/settings'],
+          ].map(([item, path]) => (
+            <Link
               key={item}
               className={activeNav === item ? styles.navItemActive : styles.navItem}
-              onClick={() => setActiveNav(item)}
+              to={path}
             >
               {item}
-            </button>
+            </Link>
           ))}
-          <button className={styles.signOutBtn}>Sign out</button>
+          <button
+            className={styles.signOutBtn}
+            onClick={async () => {
+              await logout();
+              navigate('/login', { replace: true });
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </div>

@@ -5,10 +5,10 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import WorkspacePage from './pages/WorkspacePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 
-// Redirect /auth?mode=signup → /register, else → /login
 function AuthRedirect() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -30,7 +30,15 @@ export default function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/vault" element={<WorkspacePage section="vault" />} />
+          <Route path="/nominees" element={<WorkspacePage section="nominees" />} />
+          <Route path="/activity" element={<WorkspacePage section="activity" />} />
+          <Route path="/documents" element={<WorkspacePage section="documents" />} />
+          <Route path="/calendar" element={<WorkspacePage section="calendar" />} />
+          <Route path="/settings" element={<WorkspacePage section="settings" />} />
         </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

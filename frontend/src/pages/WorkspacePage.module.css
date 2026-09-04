@@ -1,0 +1,362 @@
+:root {
+  --w-bg: #edf1ee;
+  --w-ink: #171917;
+  --w-muted: #7d847f;
+  --w-line: rgba(30, 35, 32, .08);
+}
+
+.shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 82% 5%, rgba(255, 255, 255, .95), transparent 28%),
+    radial-gradient(circle at 10% 30%, rgba(214, 225, 218, .65), transparent 34%),
+    linear-gradient(135deg, #edf1ef, #e5ebe7 55%, #f4f4f0);
+  color: var(--w-ink);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.content {
+  width: min(1040px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 34px 0 120px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #737a75;
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin: 30px 0 22px;
+}
+
+.eyebrow,
+.kicker {
+  color: #929994;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .13em;
+}
+
+.header h1 {
+  margin: 7px 0 8px;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -.05em;
+  font-weight: 600;
+}
+
+.header p {
+  max-width: 600px;
+  margin: 0;
+  color: #7b827d;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.headerIcon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--w-line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .7);
+  color: #667169;
+}
+
+.notice,
+.panel,
+.empty {
+  border: 1px solid var(--w-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 13px 30px rgba(45, 53, 48, .06), inset 0 1px 0 rgba(255, 255, 255, .85);
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  margin-bottom: 10px;
+}
+
+.notice strong {
+  font-size: 10px;
+}
+
+.notice span {
+  color: #8a918c;
+  font-size: 9px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.stat {
+  padding: 16px;
+  border: 1px solid var(--w-line);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .65);
+}
+
+.stat strong {
+  display: block;
+  font-size: 22px;
+  letter-spacing: -.04em;
+  font-weight: 600;
+}
+
+.stat span {
+  display: block;
+  margin-top: 4px;
+  color: #8c938e;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.panel {
+  padding: 19px;
+}
+
+.panelHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 14px;
+}
+
+.panel h2 {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.actions {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: #202420;
+  color: #fff;
+  font-size: 8px;
+  text-decoration: none;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(30, 35, 32, .055);
+}
+
+.rowIcon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #f0f3f0;
+  color: #657069;
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rowMain strong {
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.rowMain span,
+.status {
+  color: #929994;
+  font-size: 8px;
+}
+
+.status {
+  padding: 4px 7px;
+  border-radius: 99px;
+  background: #f0f3f0;
+  color: #667169;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 13px;
+  color: #737a75;
+}
+
+.empty div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.empty strong {
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.empty span {
+  font-size: 8px;
+  color: #929994;
+}
+
+/* =========================================================
+   FLOATING NAV — WORKSPACE PAGES
+   Must visually match Dashboard navigation exactly.
+   ========================================================= */
+
+.bottomNav {
+  position: fixed;
+  z-index: 100;
+
+  left: 50%;
+  bottom: 14px;
+
+  transform: translateX(-50%);
+
+  display: flex;
+  align-items: center;
+
+  width: max-content;
+  max-width: calc(100vw - 24px);
+
+  padding: 5px;
+
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 5px;
+
+  background: rgba(27, 29, 28, 0.96);
+
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  white-space: nowrap;
+}
+
+.bottomNav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 28px;
+  padding: 0 10px;
+
+  border-radius: 5px;
+
+  color: #929993 !important;
+  background: transparent;
+
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 550;
+
+  text-decoration: none !important;
+
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.bottomNav a:first-child {
+  min-width: 36px;
+  padding: 0 8px;
+
+  color: #f4f6f4 !important;
+
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.bottomNav a:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.bottomNav .active {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+@media (max-width: 650px) {
+  .bottomNav {
+    max-width: calc(100vw - 24px);
+    overflow-x: auto;
+  }
+
+  .bottomNav a {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 650px) {
+  .content {
+    width: calc(100% - 24px);
+    padding-top: 22px;
+  }
+
+  .header {
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .header h1 {
+    font-size: 26px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .panelHead {
+    flex-direction: column;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+}
