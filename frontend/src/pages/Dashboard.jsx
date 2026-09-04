@@ -1,204 +1,179 @@
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React from 'react';
+import { 
+  Bell, Landmark, TrendingUp, Bitcoin, Home, Gem, 
+  ShieldCheck, FileText, Key, Mail 
+} from 'lucide-react';
 import styles from './Dashboard.module.css';
 
-const categories = [
-  { icon: '🏠', label: 'Property', count: 3, tag: 'Organised', tagType: 'success' },
-  { icon: '📊', label: 'Investments', count: 5, tag: 'Organised', tagType: 'success' },
-  { icon: '🏦', label: 'Financial', count: 2, tag: 'Review', tagType: 'warning' },
-  { icon: '📋', label: 'Insurance', count: 2, tag: 'Organised', tagType: 'success' },
-  { icon: '₿', label: 'Crypto', count: 0, tag: 'Add keys', tagType: 'muted' },
-  { icon: '🔑', label: 'Passwords', count: 18, tag: 'Organised', tagType: 'success' },
-  { icon: '🪙', label: 'Physical', count: 4, tag: 'Organised', tagType: 'success' },
-  { icon: '📁', label: 'Documents', count: 7, tag: 'Organised', tagType: 'success' },
-  { icon: '💌', label: 'Personal', count: 1, tag: 'Add more', tagType: 'muted' },
-];
-
-const recentActivity = [
-  { icon: '📊', text: 'Mutual fund added to Investments', time: '2h ago' },
-  { icon: '👤', text: 'Nominee Sunita Rao verified', time: '1d ago' },
-  { icon: '📋', text: 'LIC policy document uploaded', time: '3d ago' },
-  { icon: '🔑', text: '3 new passwords added', time: '5d ago' },
-];
-
-const navItems = [
-  { id: 'dashboard', label: 'Home' },
-  { id: 'vault', label: 'Vault' },
-  { id: 'nominees', label: 'Nominees' },
-  { id: 'activity', label: 'Activity' },
-  { id: 'settings', label: 'Settings' },
-];
-
-export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const [activeNav, setActiveNav] = useState('dashboard');
-
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
-    : 'U';
-
-  const readiness = 74;
-
+const Dashboard = () => {
   return (
-    <div className={styles.root}>
-      {/* ── Header ─────────────────────────────────────────── */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <a href="/" className={styles.logo}>
-            DV<span className={styles.logoDot}>.</span>
-          </a>
+    <div className={styles.dashboardContainer}>
+      {/* 1. LEFT SIDEBAR */}
+      <aside className={styles.sidebar}>
+        <div className={styles.logo}>
+          <h2>DV.</h2>
         </div>
-        <div className={styles.headerRight}>
-          <button className={styles.notifBtn} aria-label="Notifications">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
-            <span className={styles.notifDot} />
+        <div className={styles.sidebarBottom}>
+          <button className={styles.iconButton}>
+            <Bell size={18} />
           </button>
-          <button className={styles.avatar} onClick={logout} title="Sign out">
-            {initials}
-          </button>
+          <button className={styles.profileIcon}>A</button>
         </div>
-      </header>
+      </aside>
 
-      {/* ── Main scroll area ────────────────────────────────── */}
-      <main className={styles.main}>
-
-        {/* Greeting */}
-        <section className={styles.greeting}>
-          <div>
-            <p className={styles.greetLabel}>Good morning,</p>
-            <h1 className={styles.greetName}>{user?.name?.split(' ')[0] ?? 'there'} 👋</h1>
-          </div>
-          <button className={styles.addBtn}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            Add asset
-          </button>
-        </section>
-
-        {/* Legacy Readiness card */}
-        <section className={styles.readinessCard}>
-          <div className={styles.readinessTop}>
-            <div>
-              <p className={styles.readinessTitle}>Legacy Readiness</p>
-              <p className={styles.readinessSub}>3 of 9 categories need attention</p>
+      {/* MAIN GRID CONTENT */}
+      <main className={styles.mainGrid}>
+        
+        {/* 2. TOP MAIN HERO */}
+        <section className={`${styles.card} ${styles.topMain}`}>
+          <div className={styles.cardHeader}>
+            <h3>Total Wealth & Financial Assets</h3>
+            <div className={styles.filterPills}>
+              <span className={styles.activePill}>All</span>
+              <span>Banks</span>
+              <span>Crypto</span>
             </div>
-            <span className={styles.readinessPct}>{readiness}%</span>
           </div>
-          <div className={styles.readinessBar}>
-            <div className={styles.readinessFill} style={{ width: `${readiness}%` }} />
-          </div>
-          <div className={styles.readinessTags}>
-            <span className={`${styles.rTag} ${styles.rTagWarning}`}>📋 Insurance incomplete</span>
-            <span className={`${styles.rTag} ${styles.rTagMuted}`}>₿ Crypto missing</span>
-          </div>
-        </section>
-
-        {/* Stats strip */}
-        <div className={styles.statsStrip}>
-          {[
-            { num: '42', label: 'Assets' },
-            { num: '3', label: 'Nominees' },
-            { num: '12', label: 'Documents' },
-          ].map((s) => (
-            <div key={s.label} className={styles.statCard}>
-              <span className={styles.statNum}>{s.num}</span>
-              <span className={styles.statLabel}>{s.label}</span>
+          <div className={styles.heroContent}>
+            <div className={styles.netWorthBanner}>
+              <p>Total Net Worth</p>
+              <h1>$1,245,000</h1>
             </div>
-          ))}
-        </div>
-
-        {/* Vault categories */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Vault</h2>
-            <button className={styles.seeAll}>View all</button>
-          </div>
-          <div className={styles.catGrid}>
-            {categories.map((cat) => (
-              <div key={cat.label} className={styles.catCard}>
-                <div className={styles.catTop}>
-                  <span className={styles.catIcon}>{cat.icon}</span>
-                  <span className={`${styles.catTag} ${styles[`catTag--${cat.tagType}`]}`}>
-                    {cat.tag}
-                  </span>
+            <div className={styles.assetList}>
+              <div className={styles.assetItem}>
+                <div className={styles.iconWrapper}><Landmark size={18} /></div>
+                <div>
+                  <h4>Financial</h4>
+                  <p>Bank accounts, FDs</p>
                 </div>
-                <span className={styles.catLabel}>{cat.label}</span>
-                <span className={styles.catCount}>
-                  {cat.count > 0 ? `${cat.count} item${cat.count !== 1 ? 's' : ''}` : 'Empty'}
-                </span>
               </div>
-            ))}
+              <div className={styles.assetItem}>
+                <div className={styles.iconWrapper}><TrendingUp size={18} /></div>
+                <div>
+                  <h4>Investments</h4>
+                  <p>Stocks, MF, SIPs</p>
+                </div>
+              </div>
+              <div className={styles.assetItem}>
+                <div className={styles.iconWrapper}><Bitcoin size={18} /></div>
+                <div>
+                  <h4>Crypto</h4>
+                  <p>Wallets, private keys</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Recent activity */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Recent Activity</h2>
-            <button className={styles.seeAll}>See all</button>
-          </div>
-          <div className={styles.activityList}>
-            {recentActivity.map((item, i) => (
-              <div key={i} className={styles.activityRow}>
-                <div className={styles.activityIcon}>{item.icon}</div>
-                <div className={styles.activityInfo}>
-                  <p className={styles.activityText}>{item.text}</p>
-                  <span className={styles.activityTime}>{item.time}</span>
-                </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={styles.activityChevron}><path d="M9 18l6-6-6-6" /></svg>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Nominees quick glance */}
-        <section className={`${styles.section} ${styles.sectionLast}`}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Nominees</h2>
-            <button className={styles.seeAll}>Manage</button>
+        {/* 3. TOP RIGHT: NOMINEES */}
+        <section className={`${styles.card} ${styles.topRight}`}>
+          <div className={styles.cardHeader}>
+            <h3>Nominees & Access</h3>
+            <span className={styles.statusBadge}>100% Covered</span>
           </div>
           <div className={styles.nomineeList}>
-            {[
-              { initials: 'SR', name: 'Sunita Rao', rel: 'Spouse', access: 'Full Access', color: '#EEF3FF' },
-              { initials: 'AK', name: 'Arjun Kumar', rel: 'Son', access: 'Selected', color: '#F0FDF4' },
-              { initials: 'PL', name: 'Priya Lawyers', rel: 'Legal', access: 'Docs only', color: '#FFF7ED' },
-            ].map((n, i) => (
-              <div key={i} className={styles.nomineeRow}>
-                <div className={styles.nomineeAvatar} style={{ background: n.color }}>
-                  {n.initials}
-                </div>
-                <div className={styles.nomineeInfo}>
-                  <span className={styles.nomineeName}>{n.name}</span>
-                  <span className={styles.nomineeRel}>{n.rel}</span>
-                </div>
-                <span className={styles.nomineeAccess}>{n.access}</span>
+            <div className={styles.nomineeCard}>
+              <div className={styles.nomineeAvatar}>S</div>
+              <div className={styles.nomineeDetails}>
+                <h4>Sarah Connor</h4>
+                <p>Spouse • 50% Share</p>
               </div>
-            ))}
+            </div>
+            <div className={styles.nomineeCard}>
+              <div className={styles.nomineeAvatar}>J</div>
+              <div className={styles.nomineeDetails}>
+                <h4>John Connor</h4>
+                <p>Son • 50% Share</p>
+              </div>
+            </div>
+          </div>
+          <button className={styles.primaryButton}>+ Add Nominee</button>
+        </section>
+
+        {/* 4. BOTTOM LEFT */}
+        <section className={`${styles.card} ${styles.bottomLeft}`}>
+          <div className={styles.cardHeader}>
+            <h3>Tangible & Physical</h3>
+          </div>
+          <div className={styles.categoryContent}>
+            <div className={styles.subCategory}>
+              <div className={styles.iconWrapper}><Home size={18} /></div>
+              <div>
+                <h4>Property</h4>
+                <p>Real estate, land, home</p>
+              </div>
+            </div>
+            <div className={styles.subCategory}>
+              <div className={styles.iconWrapper}><Gem size={18} /></div>
+              <div>
+                <h4>Physical Assets</h4>
+                <p>Gold, jewellery, lockers</p>
+              </div>
+            </div>
           </div>
         </section>
 
+        {/* 4. BOTTOM MID */}
+        <section className={`${styles.card} ${styles.bottomMid}`}>
+          <div className={styles.cardHeader}>
+            <h3>Protection & Vault</h3>
+          </div>
+          <div className={styles.categoryContent}>
+            <div className={styles.subCategory}>
+              <div className={styles.iconWrapper}><ShieldCheck size={18} /></div>
+              <div>
+                <h4>Insurance</h4>
+                <p>Life, health, vehicle</p>
+              </div>
+            </div>
+            <div className={styles.subCategory}>
+              <div className={styles.iconWrapper}><FileText size={18} /></div>
+              <div>
+                <h4>Documents</h4>
+                <p>PAN, Aadhaar, will</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. BOTTOM RIGHT */}
+        <section className={`${styles.card} ${styles.bottomRight}`}>
+          <div className={styles.cardHeader}>
+            <h3>Digital & Personal</h3>
+          </div>
+          <div className={styles.categoryContent}>
+            <div className={styles.subCategory}>
+              <div className={styles.iconWrapper}><Key size={18} /></div>
+              <div>
+                <h4>Passwords</h4>
+                <p>Logins, credentials, keys</p>
+              </div>
+            </div>
+            <div className={styles.subCategory}>
+              <div className={styles.iconWrapper}><Mail size={18} /></div>
+              <div>
+                <h4>Personal</h4>
+                <p>Messages, letters, memories</p>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
-      {/* ── Floating bottom nav ──────────────────────────────── */}
-      <nav className={styles.bottomNav} aria-label="Primary navigation">
-        <div className={styles.bottomNavInner}>
+      {/* 5. BOTTOM NAV BAR - WITH ANIMATIONS */}
+      <div className={styles.bottomFloatingNav}>
+        <div className={styles.navMenu}>
           <div className={styles.navLogo}>DV.</div>
-          {navItems.map((item) => {
-            const active = activeNav === item.id;
-            return (
-              <button
-                key={item.id}
-                className={`${styles.navItem} ${active ? styles.navItemActive : ''}`}
-                onClick={() => setActiveNav(item.id)}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-          <button className={`${styles.navItem} ${styles.navItemCta}`} onClick={logout}>
-            Sign out
-          </button>
+          <button className={styles.navItemActive}>Home</button>
+          <button className={styles.navItem}>Vault</button>
+          <button className={styles.navItem}>Nominees</button>
+          <button className={styles.navItem}>Activity</button>
+          <button className={styles.navItem}>Settings</button>
+          <button className={styles.signOutBtn}>Sign out</button>
         </div>
-      </nav>
+      </div>
     </div>
   );
-}
+};
+
+export default Dashboard;
