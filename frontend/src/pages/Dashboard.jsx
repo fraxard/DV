@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -24,6 +24,8 @@ import {
   WalletCards,
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const categories = [
   { name: 'Financial', count: 4, icon: Landmark },
@@ -82,6 +84,41 @@ const Dashboard = () => {
     new Date(now.getFullYear(), now.getMonth(), 1)
   );
   const [selectedDay, setSelectedDay] = useState(now.getDate());
+  const [nomineeSummary, setNomineeSummary] = useState({
+    total_nominees: 0,
+    total_assets: 0,
+    nominees: [],
+  });
+  const [loadingNominees, setLoadingNominees] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDashboardNominees = async () => {
+      try {
+        setLoadingNominees(true);
+        const res = await fetch(`${API_URL}/nominees/dashboard-summary`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setNomineeSummary(data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard nominees:', err);
+      } finally {
+        if (isMounted) {
+          setLoadingNominees(false);
+        }
+      }
+    };
+
+    fetchDashboardNominees();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const location = useLocation();
   const activeNav = location.pathname === '/dashboard' ? 'Home'
     : location.pathname.startsWith('/vault') ? 'Vault'
@@ -202,7 +239,7 @@ const Dashboard = () => {
             <div className={styles.heroFooter}>
               <div><strong>24</strong><span>assets</span></div>
               <div><strong>06</strong><span>categories</span></div>
-              <div><strong>02</strong><span>nominees</span></div>
+              <div><strong>{String(nomineeSummary.total_nominees).padStart(2, '0')}</strong><span>nominees</span></div>
               <Link className={styles.darkAction} to="/vault">Continue <ChevronRight size={12} /></Link>
             </div>
           </section>
@@ -214,26 +251,36 @@ const Dashboard = () => {
                 <span className={styles.cardKicker}>PEOPLE</span>
                 <h3>Nominees</h3>
               </div>
-              <span className={styles.countPill}>02</span>
+              <span className={styles.countPill}>
+                {String(nomineeSummary.total_nominees).padStart(2, '0')}
+              </span>
             </div>
 
             <div className={styles.nomineeList}>
-              <div className={styles.personRow}>
-                <div className={styles.avatar}>S</div>
-                <div className={styles.personInfo}>
-                  <strong>Sarah</strong>
-                  <span>Spouse</span>
+              {loadingNominees ? (
+                <div style={{ padding: '16px', textAlign: 'center', color: '#8c938e', fontSize: '11px' }}>
+                  Loading nominees...
                 </div>
-                <span className={styles.share}>50%</span>
-              </div>
-              <div className={styles.personRow}>
-                <div className={`${styles.avatar} ${styles.avatarAlt}`}>J</div>
-                <div className={styles.personInfo}>
-                  <strong>John</strong>
-                  <span>Son</span>
+              ) : nomineeSummary.nominees.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', color: '#8c938e', fontSize: '11px' }}>
+                  No nominees yet. Add your trusted beneficiaries.
                 </div>
-                <span className={styles.share}>50%</span>
-              </div>
+              ) : (
+                nomineeSummary.nominees.map((n, idx) => (
+                  <div className={styles.personRow} key={n.id}>
+                    <div className={`${styles.avatar} ${idx % 2 === 1 ? styles.avatarAlt : ''}`}>
+                      {(n.full_name || 'N').charAt(0).toUpperCase()}
+                    </div>
+                    <div className={styles.personInfo}>
+                      <strong>{n.full_name}</strong>
+                      <span>{n.relationship}</span>
+                    </div>
+                    <span className={styles.share}>
+                      {parseFloat(Number(n.overall_share || 0).toFixed(2))}%
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
 
             <Link className={styles.textAction} to="/nominees?new=1"><Plus size={12} /> Add nominee</Link>

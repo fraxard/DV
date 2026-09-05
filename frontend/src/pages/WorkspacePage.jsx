@@ -1,13 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowLeft, CalendarDays, Download, FileCheck, FileText,
-  FolderOpen, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UploadCloud,
-  UsersRound, WalletCards, X
+  AlertTriangle, ArrowLeft, CalendarDays, Check, Download, FileCheck, FileText,
+  FolderOpen, Pencil, Percent, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UploadCloud,
+  UserCheck, UserPlus, UsersRound, WalletCards, X
 } from 'lucide-react';
 import styles from './WorkspacePage.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const formatCleanNumber = (val) => {
+  const num = Number(val);
+  if (isNaN(num)) return '0';
+  return parseFloat(num.toFixed(2)).toString();
+};
+
+const formatCleanPercent = (val) => {
+  return `${formatCleanNumber(val)}%`;
+};
 
 const configs = {
   vault: {
@@ -16,20 +26,17 @@ const configs = {
     description: 'A structured home for the assets, records and information that make up your digital legacy.',
     icon: FolderOpen,
     actions: [['Add asset', 'add-asset', WalletCards], ['Upload document', '/documents?upload=1', Upload]],
-    stats: [['0', 'total assets'], ['0', 'categories'], ['0', 'need review']],
+    stats: [['0', 'total assets'], ['0', 'categories'], ['0', 'allocated']],
     rows: [],
   },
   nominees: {
     eyebrow: 'PEOPLE',
     title: 'Nominees',
-    description: 'Manage the people who should receive or access the parts of your legacy you assign to them.',
+    description: 'Manage the trusted beneficiaries who will receive designated access to your legacy.',
     icon: UsersRound,
-    actions: [['Add nominee', '/nominees?new=1', UsersRound]],
-    stats: [['02', 'nominees'], ['50%', 'primary share'], ['100%', 'allocation']],
-    rows: [
-      ['Sarah', 'Spouse · 50%', 'Primary'],
-      ['John', 'Son · 50%', 'Primary'],
-    ],
+    actions: [['Add nominee', 'add-nominee', UserPlus]],
+    stats: [['0', 'total nominees'], ['0', 'assigned to assets'], ['0', 'unassigned']],
+    rows: [],
   },
   activity: {
     eyebrow: 'TIMELINE',
@@ -51,7 +58,7 @@ const configs = {
     description: 'Keep important records organised and ready for the people who may need them later.',
     icon: FileText,
     actions: [['Upload document', '/documents?upload=1', Upload]],
-    stats: [['0', 'documents'], ['0', 'attached to assets'], ['0', 'unattached']],
+    stats: [['0', 'documents'], ['0', 'attached to assets'], ['0', 'standalone files']],
     rows: [],
   },
   calendar: {
@@ -101,6 +108,18 @@ const ALLOWED_MIME_TYPES = [
 ];
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 
+const RELATIONSHIPS = [
+  'Spouse',
+  'Child',
+  'Parent',
+  'Sibling',
+  'Relative',
+  'Legal Heir',
+  'Friend',
+  'Partner',
+  'Other',
+];
+
 export default function WorkspacePage({ section }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -109,15 +128,17 @@ export default function WorkspacePage({ section }) {
   const hasNew = new URLSearchParams(location.search).get('new');
   const uploadParam = new URLSearchParams(location.search).get('upload');
 
-  // Documents and Assets live state
+  // Documents, Assets, and Nominees live state
   const [documents, setDocuments] = useState([]);
   const [assets, setAssets] = useState([]);
+  const [nominees, setNominees] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(section === 'documents');
   const [loadingAssets, setLoadingAssets] = useState(section === 'vault');
+  const [loadingNominees, setLoadingNominees] = useState(section === 'nominees');
 
   // Add / Edit Asset modal state
-  const [isAddAssetOpen, setIsAddAssetOpen] = useState(hasNew === 'asset');
-  const [editingAsset, setEditingAsset] = useState(null); // null = add, object = edit
+  const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState(null);
   const [isSubmittingAsset, setIsSubmittingAsset] = useState(false);
   const [assetFormError, setAssetFormError] = useState('');
   const [assetFormData, setAssetFormData] = useState({
@@ -134,6 +155,40 @@ export default function WorkspacePage({ section }) {
   const [assetToDelete, setAssetToDelete] = useState(null);
   const [isDeletingAsset, setIsDeletingAsset] = useState(false);
   const [deleteAssetError, setDeleteAssetError] = useState('');
+
+  // Asset Allocations Manager modal state
+  const [allocatingAsset, setAllocatingAsset] = useState(null);
+  const [assetAllocations, setAssetAllocations] = useState([]);
+  const [totalAllocated, setTotalAllocated] = useState(0);
+  const [remainingAllocated, setRemainingAllocated] = useState(100);
+  const [isLoadingAllocations, setIsLoadingAllocations] = useState(false);
+  const [allocationError, setAllocationError] = useState('');
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [assignFormData, setAssignFormData] = useState({
+    nomineeId: '',
+    allocationPercentage: '',
+    canView: true,
+    canDownloadDocs: true,
+  });
+  const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
+
+  // Add / Edit Nominee modal state
+  const [isNomineeModalOpen, setIsNomineeModalOpen] = useState(false);
+  const [editingNominee, setEditingNominee] = useState(null);
+  const [isSubmittingNominee, setIsSubmittingNominee] = useState(false);
+  const [nomineeFormError, setNomineeFormError] = useState('');
+  const [nomineeFormData, setNomineeFormData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    relationship: 'Spouse',
+    notes: '',
+  });
+
+  // Delete Nominee confirmation modal state
+  const [nomineeToDelete, setNomineeToDelete] = useState(null);
+  const [isDeletingNominee, setIsDeletingNominee] = useState(false);
+  const [deleteNomineeError, setDeleteNomineeError] = useState('');
 
   // Edit Document modal state
   const [editingDocument, setEditingDocument] = useState(null);
@@ -164,20 +219,26 @@ export default function WorkspacePage({ section }) {
 
   const isDocSection = section === 'documents';
   const isVaultSection = section === 'vault';
+  const isNomineeSection = section === 'nominees';
 
-  // Handle URL changes for modals
+  // Handle URL query parameters for modal open
   useEffect(() => {
-    if (hasNew === 'asset') {
+    if (hasNew === 'asset' && isVaultSection) {
       handleOpenAddAsset();
+    } else if (hasNew === '1' && isNomineeSection) {
+      handleOpenAddNominee();
     }
-  }, [hasNew]);
+  }, [hasNew, section]);
 
-  // Handle Escape key to close any active modal
+  // Handle Escape key to close active modals
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         if (isAddAssetOpen && !isSubmittingAsset) handleCloseAddAsset();
         if (assetToDelete && !isDeletingAsset) handleCloseDeleteAssetConfirm();
+        if (allocatingAsset && !isSubmittingAssign) handleCloseAllocations();
+        if (isNomineeModalOpen && !isSubmittingNominee) handleCloseNomineeModal();
+        if (nomineeToDelete && !isDeletingNominee) handleCloseDeleteNomineeConfirm();
         if (editingDocument && !isUpdatingDoc) handleCloseEditDoc();
         if (documentToDelete && !isDeletingDoc) handleCloseDeleteConfirm();
         if (uploadParam && !isUploading) navigate('/documents');
@@ -185,7 +246,12 @@ export default function WorkspacePage({ section }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAddAssetOpen, isSubmittingAsset, assetToDelete, isDeletingAsset, editingDocument, isUpdatingDoc, documentToDelete, isDeletingDoc, uploadParam, isUploading]);
+  }, [
+    isAddAssetOpen, isSubmittingAsset, assetToDelete, isDeletingAsset,
+    allocatingAsset, isSubmittingAssign, isNomineeModalOpen, isSubmittingNominee,
+    nomineeToDelete, isDeletingNominee, editingDocument, isUpdatingDoc,
+    documentToDelete, isDeletingDoc, uploadParam, isUploading
+  ]);
 
   const fetchDocuments = async () => {
     try {
@@ -217,17 +283,316 @@ export default function WorkspacePage({ section }) {
     }
   };
 
+  const fetchNominees = async () => {
+    try {
+      setLoadingNominees(true);
+      const res = await fetch(`${API_URL}/nominees`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setNominees(data.nominees || []);
+      }
+    } catch (err) {
+      console.error('Failed to load nominees:', err);
+    } finally {
+      setLoadingNominees(false);
+    }
+  };
+
   useEffect(() => {
     if (isDocSection) {
       fetchDocuments();
       fetchAssets();
     } else if (isVaultSection) {
       fetchAssets();
+      fetchNominees();
+    } else if (isNomineeSection) {
+      fetchNominees();
+      fetchAssets();
     }
   }, [section]);
 
   // -------------------------------------------------------------
-  // ASSET MODAL HANDLERS (ADD & EDIT)
+  // NOMINEE HANDLERS
+  // -------------------------------------------------------------
+  const handleOpenAddNominee = () => {
+    setEditingNominee(null);
+    setNomineeFormError('');
+    setNomineeFormData({
+      fullName: '',
+      email: '',
+      phone: '',
+      relationship: 'Spouse',
+      notes: '',
+    });
+    setIsNomineeModalOpen(true);
+  };
+
+  const handleOpenEditNominee = (nominee) => {
+    setEditingNominee(nominee);
+    setNomineeFormError('');
+    setNomineeFormData({
+      fullName: nominee.full_name || '',
+      email: nominee.email || '',
+      phone: nominee.phone || '',
+      relationship: nominee.relationship || 'Spouse',
+      notes: nominee.notes || '',
+    });
+    setIsNomineeModalOpen(true);
+  };
+
+  const handleCloseNomineeModal = () => {
+    if (isSubmittingNominee) return;
+    setIsNomineeModalOpen(false);
+    setEditingNominee(null);
+    setNomineeFormError('');
+    if (hasNew === '1') {
+      navigate('/nominees', { replace: true });
+    }
+  };
+
+  const handleSaveNomineeSubmit = async (e) => {
+    e.preventDefault();
+    if (!nomineeFormData.fullName.trim()) {
+      setNomineeFormError('Nominee full name is required.');
+      return;
+    }
+    if (!nomineeFormData.email.trim()) {
+      setNomineeFormError('Nominee email is required.');
+      return;
+    }
+
+    try {
+      setIsSubmittingNominee(true);
+      setNomineeFormError('');
+
+      const payload = {
+        fullName: nomineeFormData.fullName.trim(),
+        email: nomineeFormData.email.trim().toLowerCase(),
+        phone: nomineeFormData.phone.trim() || undefined,
+        relationship: nomineeFormData.relationship.trim(),
+        notes: nomineeFormData.notes.trim() || undefined,
+      };
+
+      const url = editingNominee ? `${API_URL}/nominees/${editingNominee.id}` : `${API_URL}/nominees`;
+      const method = editingNominee ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error?.message || 'Failed to save nominee.');
+      }
+
+      await fetchNominees();
+      handleCloseNomineeModal();
+    } catch (err) {
+      setNomineeFormError(err.message);
+    } finally {
+      setIsSubmittingNominee(false);
+    }
+  };
+
+  const handleOpenDeleteNomineeConfirm = (nominee) => {
+    setDeleteNomineeError('');
+    setNomineeToDelete(nominee);
+  };
+
+  const handleCloseDeleteNomineeConfirm = () => {
+    if (isDeletingNominee) return;
+    setNomineeToDelete(null);
+    setDeleteNomineeError('');
+  };
+
+  const handleConfirmDeleteNominee = async () => {
+    if (!nomineeToDelete) return;
+    try {
+      setIsDeletingNominee(true);
+      setDeleteNomineeError('');
+
+      const res = await fetch(`${API_URL}/nominees/${nomineeToDelete.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error?.message || 'Failed to delete nominee.');
+      }
+
+      await fetchNominees();
+      setNomineeToDelete(null);
+    } catch (err) {
+      setDeleteNomineeError(err.message);
+    } finally {
+      setIsDeletingNominee(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // ASSET ALLOCATION HANDLERS
+  // -------------------------------------------------------------
+  const fetchAllocationsForAsset = async (assetId) => {
+    try {
+      setIsLoadingAllocations(true);
+      setAllocationError('');
+      const res = await fetch(`${API_URL}/vault/assets/${assetId}/nominees`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAssetAllocations(data.nominees || []);
+        setTotalAllocated(data.total_allocated_percentage || 0);
+        setRemainingAllocated(data.remaining_percentage !== undefined ? data.remaining_percentage : 100);
+      }
+    } catch (err) {
+      console.error('Failed to load asset allocations:', err);
+    } finally {
+      setIsLoadingAllocations(false);
+    }
+  };
+
+  const handleOpenAllocations = async (asset) => {
+    setAllocatingAsset(asset);
+    setAllocationError('');
+    setAssignFormData({
+      nomineeId: '',
+      allocationPercentage: '',
+      canView: true,
+      canDownloadDocs: true,
+    });
+    await fetchAllocationsForAsset(asset.id);
+  };
+
+  const handleOpenEditAssignment = (item) => {
+    setEditingAssignment(item);
+    setAllocationError('');
+    setAssignFormData({
+      nomineeId: item.nominee_id,
+      allocationPercentage: formatCleanNumber(item.allocation_percentage),
+      canView: Boolean(item.can_view),
+      canDownloadDocs: Boolean(item.can_download_docs),
+    });
+  };
+
+  const handleCancelEditAssignment = () => {
+    setEditingAssignment(null);
+    setAllocationError('');
+    setAssignFormData({
+      nomineeId: '',
+      allocationPercentage: '',
+      canView: true,
+      canDownloadDocs: true,
+    });
+  };
+
+  const handleCloseAllocations = () => {
+    if (isSubmittingAssign) return;
+    setAllocatingAsset(null);
+    setAssetAllocations([]);
+    setAllocationError('');
+    setEditingAssignment(null);
+    setAssignFormData({
+      nomineeId: '',
+      allocationPercentage: '',
+      canView: true,
+      canDownloadDocs: true,
+    });
+  };
+
+  const handleAssignNomineeSubmit = async (e) => {
+    e.preventDefault();
+    if (!assignFormData.nomineeId) {
+      setAllocationError('Please select a nominee to assign.');
+      return;
+    }
+    const val = Number(assignFormData.allocationPercentage);
+    if (isNaN(val) || val <= 0 || val > 100) {
+      setAllocationError('Allocation percentage must be greater than 0 and at most 100.');
+      return;
+    }
+
+    const otherAllocated = editingAssignment
+      ? totalAllocated - (editingAssignment.allocation_percentage || 0)
+      : totalAllocated;
+    const available = Math.max(0, Math.round((100 - otherAllocated) * 100) / 100);
+
+    if (val > available) {
+      setAllocationError(`Only ${formatCleanNumber(available)}% remains available for this asset.`);
+      return;
+    }
+
+    try {
+      setIsSubmittingAssign(true);
+      setAllocationError('');
+
+      const isEdit = Boolean(editingAssignment);
+      const url = isEdit
+        ? `${API_URL}/vault/assets/${allocatingAsset.id}/nominees/${editingAssignment.nominee_id}`
+        : `${API_URL}/vault/assets/${allocatingAsset.id}/nominees`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          nomineeId: assignFormData.nomineeId,
+          allocationPercentage: val,
+          canView: assignFormData.canView,
+          canDownloadDocs: assignFormData.canDownloadDocs,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error?.message || (isEdit ? 'Failed to update allocation.' : 'Failed to assign nominee.'));
+      }
+
+      setEditingAssignment(null);
+      setAssignFormData({
+        nomineeId: '',
+        allocationPercentage: '',
+        canView: true,
+        canDownloadDocs: true,
+      });
+
+      await fetchAllocationsForAsset(allocatingAsset.id);
+      await fetchNominees();
+    } catch (err) {
+      setAllocationError(err.message);
+    } finally {
+      setIsSubmittingAssign(false);
+    }
+  };
+
+  const handleRemoveNomineeAssignment = async (nomineeId) => {
+    try {
+      setAllocationError('');
+      const res = await fetch(`${API_URL}/vault/assets/${allocatingAsset.id}/nominees/${nomineeId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error?.message || 'Failed to remove assignment.');
+      }
+      if (editingAssignment && editingAssignment.nominee_id === nomineeId) {
+        handleCancelEditAssignment();
+      }
+      await fetchAllocationsForAsset(allocatingAsset.id);
+      await fetchNominees();
+    } catch (err) {
+      setAllocationError(err.message);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // ASSET CRUD HANDLERS
   // -------------------------------------------------------------
   const handleOpenAddAsset = () => {
     setEditingAsset(null);
@@ -325,11 +690,8 @@ export default function WorkspacePage({ section }) {
         throw new Error(data?.error?.message || (editingAsset ? 'Failed to update asset.' : 'Failed to create asset.'));
       }
 
-      // Refresh assets list so both vault and document dropdown stay synchronized
       await fetchAssets();
-      if (isDocSection) {
-        await fetchDocuments();
-      }
+      if (isDocSection) await fetchDocuments();
       setIsAddAssetOpen(false);
       setEditingAsset(null);
       if (hasNew === 'asset') {
@@ -342,9 +704,6 @@ export default function WorkspacePage({ section }) {
     }
   };
 
-  // -------------------------------------------------------------
-  // DELETE ASSET MODAL HANDLERS
-  // -------------------------------------------------------------
   const handleOpenDeleteAssetConfirm = (asset) => {
     setDeleteAssetError('');
     setAssetToDelete(asset);
@@ -372,12 +731,9 @@ export default function WorkspacePage({ section }) {
         throw new Error(data?.error?.message || 'Failed to delete asset.');
       }
 
-      // Refresh assets
       await fetchAssets();
-      // Also update documents list if in documents section (linked docs become standalone)
-      if (isDocSection) {
-        await fetchDocuments();
-      }
+      if (isDocSection) await fetchDocuments();
+      if (isNomineeSection) await fetchNominees();
       setAssetToDelete(null);
     } catch (err) {
       setDeleteAssetError(err.message);
@@ -387,7 +743,7 @@ export default function WorkspacePage({ section }) {
   };
 
   // -------------------------------------------------------------
-  // EDIT DOCUMENT MODAL HANDLERS
+  // DOCUMENT CRUD HANDLERS
   // -------------------------------------------------------------
   const handleOpenEditDoc = (doc) => {
     setEditDocError('');
@@ -443,9 +799,6 @@ export default function WorkspacePage({ section }) {
     }
   };
 
-  // -------------------------------------------------------------
-  // DELETE DOCUMENT MODAL HANDLERS
-  // -------------------------------------------------------------
   const handleOpenDeleteConfirm = (doc) => {
     setDeleteError('');
     setDocumentToDelete(doc);
@@ -589,8 +942,8 @@ export default function WorkspacePage({ section }) {
     }
   };
 
-  // Compute stats
-  const docStats = isDocSection
+  // Section-specific dynamic statistics
+  const currentStats = isDocSection
     ? [
         [documents.length.toString(), 'total files'],
         [documents.filter((d) => d.asset_id).length.toString(), 'linked to assets'],
@@ -601,6 +954,12 @@ export default function WorkspacePage({ section }) {
         [assets.length.toString(), 'total assets'],
         [new Set(assets.map((a) => a.category)).size.toString(), 'categories'],
         ['0', 'need review'],
+      ]
+    : isNomineeSection
+    ? [
+        [nominees.length.toString(), 'total nominees'],
+        [nominees.filter((n) => n.assigned_assets_count > 0).length.toString(), 'assigned to assets'],
+        [nominees.filter((n) => n.assigned_assets_count === 0).length.toString(), 'unassigned'],
       ]
     : config.stats;
 
@@ -618,7 +977,7 @@ export default function WorkspacePage({ section }) {
           <div className={styles.headerIcon}><Icon size={19} /></div>
         </header>
 
-        {(hasNew && !isDocSection && !isVaultSection) && (
+        {(hasNew && !isDocSection && !isVaultSection && !isNomineeSection) && (
           <div className={styles.notice}>
             <strong>Create flow ready</strong>
             <span>
@@ -628,7 +987,7 @@ export default function WorkspacePage({ section }) {
         )}
 
         <section className={styles.stats}>
-          {docStats.map(([value, label]) => (
+          {currentStats.map(([value, label]) => (
             <div className={styles.stat} key={label}>
               <strong>{value}</strong>
               <span>{label}</span>
@@ -652,8 +1011,17 @@ export default function WorkspacePage({ section }) {
                   <WalletCards size={13} /> Add asset
                 </button>
               )}
+              {isNomineeSection && (
+                <button
+                  type="button"
+                  onClick={handleOpenAddNominee}
+                  className={styles.actionBtn}
+                >
+                  <UserPlus size={13} /> Add nominee
+                </button>
+              )}
               {config.actions
-                .filter(([label, to]) => !(isVaultSection && to === 'add-asset'))
+                .filter(([label, to]) => !(isVaultSection && to === 'add-asset') && !(isNomineeSection && to === 'add-nominee'))
                 .map(([label, to, ActionIcon]) => (
                   <Link to={to} className={styles.action} key={label}>
                     <ActionIcon size={13} /> {label}
@@ -738,6 +1106,15 @@ export default function WorkspacePage({ section }) {
                     </div>
                     <div className={styles.itemActions}>
                       <button
+                        onClick={() => handleOpenAllocations(asset)}
+                        className={styles.iconActionBtn}
+                        title="Manage Nominees & Allocations"
+                        aria-label="Manage Nominees & Allocations"
+                        type="button"
+                      >
+                        <UsersRound size={13} />
+                      </button>
+                      <button
                         onClick={() => handleOpenEditAsset(asset)}
                         className={styles.iconActionBtn}
                         title="Edit asset"
@@ -751,6 +1128,50 @@ export default function WorkspacePage({ section }) {
                         className={styles.iconActionBtn}
                         title="Delete asset"
                         aria-label="Delete asset"
+                        type="button"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : isNomineeSection ? (
+              loadingNominees ? (
+                <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
+                  Loading nominees...
+                </div>
+              ) : nominees.length === 0 ? (
+                <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
+                  No nominees registered yet. Click "Add nominee" to designate trusted beneficiaries for your legacy.
+                </div>
+              ) : (
+                nominees.map((nominee) => (
+                  <div className={styles.row} key={nominee.id}>
+                    <div className={styles.rowIcon}><UsersRound size={14} /></div>
+                    <div className={styles.rowMain}>
+                      <strong>{nominee.full_name}</strong>
+                      <span>
+                        {nominee.relationship} · {nominee.email}
+                        {nominee.phone ? ` · ${nominee.phone}` : ''}
+                        {nominee.assigned_assets_count > 0 ? ` · Assigned to ${nominee.assigned_assets_count} asset${nominee.assigned_assets_count > 1 ? 's' : ''}` : ' · Unassigned'}
+                      </span>
+                    </div>
+                    <div className={styles.itemActions}>
+                      <button
+                        onClick={() => handleOpenEditNominee(nominee)}
+                        className={styles.iconActionBtn}
+                        title="Edit nominee"
+                        aria-label="Edit nominee"
+                        type="button"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleOpenDeleteNomineeConfirm(nominee)}
+                        className={styles.iconActionBtn}
+                        title="Delete nominee"
+                        aria-label="Delete nominee"
                         type="button"
                       >
                         <Trash2 size={13} />
@@ -774,7 +1195,7 @@ export default function WorkspacePage({ section }) {
           </div>
         </section>
 
-        {!isDocSection && !isVaultSection && (
+        {!isDocSection && !isVaultSection && !isNomineeSection && (
           <section className={styles.empty}>
             <Search size={15} />
             <div>
@@ -808,7 +1229,6 @@ export default function WorkspacePage({ section }) {
               <form onSubmit={handleUploadSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div className={styles.formGroup}>
                   <label>Document File</label>
-                  
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1012,7 +1432,7 @@ export default function WorkspacePage({ section }) {
         )}
 
         {/* =========================================================
-            CUSTOM IN-APP DELETE DOCUMENT CONFIRMATION MODAL
+            DELETE DOCUMENT CONFIRMATION MODAL
             ========================================================= */}
         {documentToDelete && (
           <div className={styles.uploadModalOverlay} onClick={handleCloseDeleteConfirm}>
@@ -1062,7 +1482,7 @@ export default function WorkspacePage({ section }) {
         )}
 
         {/* =========================================================
-            ADD / EDIT ASSET IN-APP MODAL
+            ADD / EDIT ASSET MODAL
             ========================================================= */}
         {isAddAssetOpen && (
           <div className={styles.uploadModalOverlay} onClick={handleCloseAddAsset}>
@@ -1186,7 +1606,7 @@ export default function WorkspacePage({ section }) {
         )}
 
         {/* =========================================================
-            CUSTOM IN-APP DELETE ASSET CONFIRMATION MODAL
+            DELETE ASSET CONFIRMATION MODAL
             ========================================================= */}
         {assetToDelete && (
           <div className={styles.uploadModalOverlay} onClick={handleCloseDeleteAssetConfirm}>
@@ -1229,6 +1649,431 @@ export default function WorkspacePage({ section }) {
                   disabled={isDeletingAsset}
                 >
                   <Trash2 size={12} /> {isDeletingAsset ? 'Deleting...' : 'Delete Asset'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================
+            ASSET NOMINEE ALLOCATION MANAGER MODAL
+            ========================================================= */}
+        {allocatingAsset && (() => {
+          const assignedNomineeIds = new Set(assetAllocations.map((a) => a.nominee_id));
+          const availableNominees = editingAssignment
+            ? nominees.filter((n) => n.id === editingAssignment.nominee_id)
+            : nominees.filter((n) => !assignedNomineeIds.has(n.id));
+
+          const allAssigned = !editingAssignment && nominees.length > 0 && availableNominees.length === 0;
+          const noNomineesAtAll = nominees.length === 0;
+
+          const currentOtherAllocated = editingAssignment
+            ? totalAllocated - (editingAssignment.allocation_percentage || 0)
+            : totalAllocated;
+          const currentAvailable = Math.max(0, Math.round((100 - currentOtherAllocated) * 100) / 100);
+
+          const enteredVal = Number(assignFormData.allocationPercentage);
+          const isOverAvailable =
+            assignFormData.allocationPercentage !== '' &&
+            !isNaN(enteredVal) &&
+            (enteredVal > currentAvailable || enteredVal <= 0);
+
+          return (
+            <div className={styles.uploadModalOverlay} onClick={handleCloseAllocations}>
+              <div className={styles.uploadModal} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.modalHead}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <UsersRound size={17} color="#1b4fd8" />
+                    <h3>Beneficiary Allocations</h3>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.closeBtn}
+                    onClick={handleCloseAllocations}
+                    disabled={isSubmittingAssign}
+                    aria-label="Close"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                <div style={{ fontSize: '11px', color: '#667169' }}>
+                  Manage nominees and percentage distributions for <strong>{allocatingAsset.name}</strong>.
+                </div>
+
+                {/* Progress bar visual */}
+                <div className={styles.progressBarContainer}>
+                  <div className={styles.progressBarMeta}>
+                    <span className={styles.progressBarLabel}>Total Allocation</span>
+                    <span className={styles.progressBarValue}>{formatCleanPercent(totalAllocated)} / 100%</span>
+                  </div>
+                  <div className={styles.progressBarTrack}>
+                    <div
+                      className={`${styles.progressBarFill} ${totalAllocated === 100 ? styles.progressBarFillFull : ''}`}
+                      style={{ width: `${Math.min(100, totalAllocated)}%` }}
+                    />
+                  </div>
+                  <div style={{ fontSize: '9px', color: '#8c938e' }}>
+                    {remainingAllocated > 0
+                      ? `${formatCleanPercent(remainingAllocated)} remaining to be allocated.`
+                      : '100% fully allocated.'}
+                  </div>
+                </div>
+
+                {allocationError && <div className={styles.formError}>{allocationError}</div>}
+
+                {/* Existing assigned nominees */}
+                <div className={styles.formGroup}>
+                  <label>Assigned Nominees ({assetAllocations.length})</label>
+                  {isLoadingAllocations ? (
+                    <div style={{ padding: '10px 0', fontSize: '10px', color: '#8c938e', textAlign: 'center' }}>
+                      Loading allocations...
+                    </div>
+                  ) : assetAllocations.length === 0 ? (
+                    <div style={{ padding: '12px', fontSize: '10px', color: '#8c938e', background: '#fafbfa', borderRadius: '8px', border: '1px solid rgba(30,35,32,0.06)', textAlign: 'center' }}>
+                      No beneficiaries assigned yet. Use the form below to allocate.
+                    </div>
+                  ) : (
+                    <div className={styles.assignmentList}>
+                      {assetAllocations.map((item) => (
+                        <div className={styles.assignmentItem} key={item.nominee_id}>
+                          <div className={styles.assignmentInfo}>
+                            <span className={styles.assignmentName}>{item.nominee_name}</span>
+                            <span className={styles.assignmentSub}>{item.nominee_relationship} · {item.nominee_email}</span>
+                          </div>
+                          <div className={styles.assignmentControls}>
+                            <span className={styles.allocationBadge}>{formatCleanPercent(item.allocation_percentage)}</span>
+                            <button
+                              type="button"
+                              className={styles.iconActionBtn}
+                              onClick={() => handleOpenEditAssignment(item)}
+                              title="Edit allocation"
+                              aria-label="Edit allocation"
+                              disabled={isSubmittingAssign}
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.iconActionBtn}
+                              onClick={() => handleRemoveNomineeAssignment(item.nominee_id)}
+                              title="Remove assignment"
+                              aria-label="Remove assignment"
+                              disabled={isSubmittingAssign}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Empty State when no nominees exist in user account */}
+                {noNomineesAtAll ? (
+                  <div style={{ padding: '14px', fontSize: '11px', color: '#667169', background: '#fafbfa', borderRadius: '8px', border: '1px solid rgba(30,35,32,0.06)', textAlign: 'center' }}>
+                    <p style={{ margin: '0 0 10px 0' }}>No nominees yet. Add a nominee first to assign them to this asset.</p>
+                    <button
+                      type="button"
+                      className={styles.submitBtn}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '10px', margin: '0 auto' }}
+                      onClick={() => {
+                        handleCloseAllocations();
+                        handleOpenAddNominee();
+                      }}
+                    >
+                      <UserPlus size={12} /> Add nominee
+                    </button>
+                  </div>
+                ) : allAssigned ? (
+                  <div style={{ padding: '12px', fontSize: '11px', color: '#526058', background: '#f4f6f4', borderRadius: '8px', border: '1px solid rgba(30,35,32,0.06)', textAlign: 'center' }}>
+                    All nominees are already assigned to this asset.
+                  </div>
+                ) : (
+                  /* Assign / Update Form */
+                  <form onSubmit={handleAssignNomineeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(30,35,32,0.08)', paddingTop: '12px' }}>
+                    {editingAssignment && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#1b4fd8', fontWeight: 600 }}>
+                        <span>Editing allocation for {editingAssignment.nominee_name}</span>
+                        <button
+                          type="button"
+                          onClick={handleCancelEditAssignment}
+                          style={{ background: 'none', border: 'none', color: '#667169', cursor: 'pointer', fontSize: '10px', textDecoration: 'underline' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+
+                    <div className={styles.formRow}>
+                      <div className={styles.formGroup}>
+                        <label>Select Nominee</label>
+                        <select
+                          className={styles.formInput}
+                          value={assignFormData.nomineeId}
+                          onChange={(e) => setAssignFormData({ ...assignFormData, nomineeId: e.target.value })}
+                          disabled={Boolean(editingAssignment)}
+                          required
+                        >
+                          <option value="">{editingAssignment ? '-- Selected Nominee --' : '-- Choose Nominee --'}</option>
+                          {availableNominees.map((n) => (
+                            <option key={n.id} value={n.id}>
+                              {n.full_name} ({n.relationship})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className={styles.formGroup}>
+                        <label>Allocation (%)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          max="100"
+                          className={styles.formInput}
+                          placeholder="e.g. 50"
+                          value={assignFormData.allocationPercentage}
+                          onChange={(e) => setAssignFormData({ ...assignFormData, allocationPercentage: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Real-time Inline Feedback */}
+                    {assignFormData.allocationPercentage !== '' && !isNaN(enteredVal) && enteredVal > currentAvailable && (
+                      <div style={{ fontSize: '10px', color: '#d93025', marginTop: '-4px' }}>
+                        Only {formatCleanNumber(currentAvailable)}% remains available for this asset.
+                      </div>
+                    )}
+                    {assignFormData.allocationPercentage !== '' && !isNaN(enteredVal) && enteredVal <= 0 && (
+                      <div style={{ fontSize: '10px', color: '#d93025', marginTop: '-4px' }}>
+                        Allocation percentage must be greater than 0%.
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '14px', fontSize: '10px', color: '#667169' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={assignFormData.canView}
+                          onChange={(e) => setAssignFormData({ ...assignFormData, canView: e.target.checked })}
+                        />
+                        Can view details
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={assignFormData.canDownloadDocs}
+                          onChange={(e) => setAssignFormData({ ...assignFormData, canDownloadDocs: e.target.checked })}
+                        />
+                        Can download documents
+                      </label>
+                    </div>
+
+                    <div className={styles.modalActions}>
+                      {editingAssignment ? (
+                        <button
+                          type="button"
+                          className={styles.cancelBtn}
+                          onClick={handleCancelEditAssignment}
+                          disabled={isSubmittingAssign}
+                        >
+                          Cancel
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.cancelBtn}
+                          onClick={handleCloseAllocations}
+                          disabled={isSubmittingAssign}
+                        >
+                          Done
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        className={styles.submitBtn}
+                        disabled={
+                          isSubmittingAssign ||
+                          !assignFormData.nomineeId ||
+                          assignFormData.allocationPercentage === '' ||
+                          isOverAvailable
+                        }
+                      >
+                        {editingAssignment ? (
+                          <>
+                            <Pencil size={12} /> {isSubmittingAssign ? 'Updating...' : 'Update Allocation'}
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={12} /> {isSubmittingAssign ? 'Saving...' : 'Set Allocation'}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* =========================================================
+            ADD / EDIT NOMINEE MODAL
+            ========================================================= */}
+        {isNomineeModalOpen && (
+          <div className={styles.uploadModalOverlay} onClick={handleCloseNomineeModal}>
+            <div className={styles.uploadModal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHead}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {editingNominee ? <Pencil size={16} color="#1b4fd8" /> : <UserPlus size={17} color="#1b4fd8" />}
+                  <h3>{editingNominee ? 'Edit Nominee' : 'Add Nominee'}</h3>
+                </div>
+                <button
+                  type="button"
+                  className={styles.closeBtn}
+                  onClick={handleCloseNomineeModal}
+                  disabled={isSubmittingNominee}
+                  aria-label="Close"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {nomineeFormError && <div className={styles.formError}>{nomineeFormError}</div>}
+
+              <form onSubmit={handleSaveNomineeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className={styles.formGroup}>
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    className={styles.formInput}
+                    placeholder="e.g. Sarah Sharma"
+                    value={nomineeFormData.fullName}
+                    onChange={(e) => setNomineeFormData({ ...nomineeFormData, fullName: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      className={styles.formInput}
+                      placeholder="e.g. sarah@example.com"
+                      value={nomineeFormData.email}
+                      onChange={(e) => setNomineeFormData({ ...nomineeFormData, email: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Relationship</label>
+                    <select
+                      className={styles.formInput}
+                      value={nomineeFormData.relationship}
+                      onChange={(e) => setNomineeFormData({ ...nomineeFormData, relationship: e.target.value })}
+                      required
+                    >
+                      {RELATIONSHIPS.map((rel) => (
+                        <option key={rel} value={rel}>{rel}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>Phone Number (Optional)</label>
+                  <input
+                    type="tel"
+                    className={styles.formInput}
+                    placeholder="e.g. +91 98765 43210"
+                    value={nomineeFormData.phone}
+                    onChange={(e) => setNomineeFormData({ ...nomineeFormData, phone: e.target.value })}
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>Notes / Instructions (Optional)</label>
+                  <input
+                    type="text"
+                    className={styles.formInput}
+                    placeholder="e.g. Primary emergency contact, legal guardian"
+                    value={nomineeFormData.notes}
+                    onChange={(e) => setNomineeFormData({ ...nomineeFormData, notes: e.target.value })}
+                  />
+                </div>
+
+                <div className={styles.modalActions}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={handleCloseNomineeModal}
+                    disabled={isSubmittingNominee}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={styles.submitBtn}
+                    disabled={isSubmittingNominee || !nomineeFormData.fullName.trim() || !nomineeFormData.email.trim()}
+                  >
+                    {editingNominee ? <Pencil size={12} /> : <Plus size={12} />}
+                    {isSubmittingNominee ? (editingNominee ? 'Saving...' : 'Adding...') : (editingNominee ? 'Save Changes' : 'Save Nominee')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================
+            DELETE NOMINEE CONFIRMATION MODAL
+            ========================================================= */}
+        {nomineeToDelete && (
+          <div className={styles.uploadModalOverlay} onClick={handleCloseDeleteNomineeConfirm}>
+            <div className={styles.uploadModal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHead}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertTriangle size={17} color="#dc2626" />
+                  <h3>Delete nominee?</h3>
+                </div>
+                <button
+                  type="button"
+                  className={styles.closeBtn}
+                  onClick={handleCloseDeleteNomineeConfirm}
+                  disabled={isDeletingNominee}
+                  aria-label="Close"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {deleteNomineeError && <div className={styles.formError}>{deleteNomineeError}</div>}
+
+              <p className={styles.confirmBody}>
+                Are you sure you want to delete <strong>"{nomineeToDelete.full_name}"</strong>? This will permanently remove them from your nominee directory and revoke any beneficiary allocations they currently hold across your assets.
+              </p>
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.cancelBtn}
+                  onClick={handleCloseDeleteNomineeConfirm}
+                  disabled={isDeletingNominee}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={styles.destructiveBtn}
+                  onClick={handleConfirmDeleteNominee}
+                  disabled={isDeletingNominee}
+                >
+                  <Trash2 size={12} /> {isDeletingNominee ? 'Deleting...' : 'Delete Nominee'}
                 </button>
               </div>
             </div>

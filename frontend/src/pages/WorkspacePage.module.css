@@ -716,4 +716,105 @@
 
 .actionBtn:hover {
   background: #111311;
+}/* ============================================================
+   PHASE 3: NOMINEES & ALLOCATION UI STYLES
+   ============================================================ */
+
+.progressBarContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8faf8;
+  border: 1px solid rgba(30, 35, 32, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.progressBarMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+}
+
+.progressBarLabel {
+  font-weight: 650;
+  color: #171917;
+}
+
+.progressBarValue {
+  font-weight: 700;
+  color: #1b4fd8;
+}
+
+.progressBarTrack {
+  width: 100%;
+  height: 7px;
+  background: #e5ebe7;
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: #1b4fd8;
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+.progressBarFillFull {
+  background: #16a34a;
+}
+
+.assignmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.assignmentItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid rgba(30, 35, 32, 0.08);
+  border-radius: 8px;
+  background: #fafbfa;
+  gap: 8px;
+}
+
+.assignmentInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.assignmentName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #171917;
+}
+
+.assignmentSub {
+  font-size: 9px;
+  color: #7d847f;
+}
+
+.assignmentControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.allocationBadge {
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: #eef3ff;
+  color: #1b4fd8;
+  font-size: 9px;
+  font-weight: 650;
 }
