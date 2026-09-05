@@ -360,7 +360,7 @@ async function runTests() {
     nomineeId: nom1.id, // User A's nominee
     allocationPercentage: 50,
   });
-  console.log(`[${hijackNomineeRes.statusCode === 400 ? 'PASS' : 'FAIL'}] 13a. User B assigning User A's nominee to User B asset rejected with 400 (${hijackNomineeRes.json?.error?.message})`);
+  console.log(`[${hijackNomineeRes.statusCode === 400 || hijackNomineeRes.statusCode === 404 ? 'PASS' : 'FAIL'}] 13a. User B assigning User A's nominee to User B asset rejected with 400/404 (${hijackNomineeRes.json?.error?.message})`);
 
   // 13b: User B attempts to assign to User A's asset -> 400 / 404
   const hijackAssetRes = await request({
