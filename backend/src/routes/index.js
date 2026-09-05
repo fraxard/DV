@@ -9,7 +9,7 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Auth routes will be mounted here in Step 6
 router.use('/auth', require('./auth.routes'));
+router.use('/vault', require('./vault.routes'));
 
 module.exports = router;
