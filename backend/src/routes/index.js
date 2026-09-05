@@ -1,4 +1,4 @@
-const router = require('express').Router();
+﻿const router = require('express').Router();
 
 // Health check — useful for Render's health checks and local verification
 router.get('/health', (req, res) => {
@@ -11,5 +11,6 @@ router.get('/health', (req, res) => {
 
 router.use('/auth', require('./auth.routes'));
 router.use('/vault', require('./vault.routes'));
+router.use('/documents', require('./document.routes'));
 
 module.exports = router;

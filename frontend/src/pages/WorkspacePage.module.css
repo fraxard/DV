@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --w-bg: #edf1ee;
   --w-ink: #171917;
   --w-muted: #7d847f;
@@ -240,7 +240,7 @@
 }
 
 /* =========================================================
-   FLOATING NAV — WORKSPACE PAGES
+   FLOATING NAVBAR WORKSPACE PAGES
    Must visually match Dashboard navigation exactly.
    ========================================================= */
 
@@ -359,4 +359,361 @@
   .actions {
     justify-content: flex-start;
   }
+}
+
+
+.uploadModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 30, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.uploadModal {
+  background: #ffffff;
+  border: 1px solid var(--w-line);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 460px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalHead h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #7d847f;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.closeBtn:hover {
+  background: #f0f3f0;
+  color: #171917;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.formGroup label {
+  font-size: 9px;
+  font-weight: 650;
+  color: #667169;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.formInput {
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(30, 35, 32, 0.12);
+  font-size: 11px;
+  background: #fafbfa;
+  font-family: inherit;
+  color: #171917;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #1b4fd8;
+  background: #fff;
+}
+
+.formError {
+  font-size: 10px;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cancelBtn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(30, 35, 32, 0.12);
+  background: #fff;
+  font-size: 10px;
+  font-weight: 550;
+  cursor: pointer;
+  color: #3d4a5c;
+}
+
+.cancelBtn:hover {
+  background: #f8faf8;
+}
+
+.submitBtn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #202420;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: #111311;
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.destructiveBtn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.destructiveBtn:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.destructiveBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.confirmBody {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #667169;
+  margin: 0;
+}
+
+.confirmBody strong {
+  color: #171917;
+  font-weight: 600;
+}
+
+/* ============================================================
+   CUSTOM DROPZONE STYLES
+   ============================================================ */
+
+.dropzone {
+  border: 1.5px dashed rgba(30, 35, 32, 0.2);
+  border-radius: 12px;
+  background: #fbfcfb;
+  padding: 22px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dropzone:hover {
+  border-color: #1b4fd8;
+  background: #f4f7ff;
+}
+
+.dropzoneActive {
+  border-color: #1b4fd8;
+  background: #edf3ff;
+  border-style: solid;
+}
+
+.dropzoneIconWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0f3f0;
+  display: grid;
+  place-items: center;
+  color: #667169;
+  margin-bottom: 2px;
+}
+
+.dropzoneActive .dropzoneIconWrapper {
+  background: #dbe6ff;
+  color: #1b4fd8;
+}
+
+.dropzonePrimaryText {
+  font-size: 11px;
+  font-weight: 600;
+  color: #171917;
+}
+
+.dropzoneSecondaryText {
+  font-size: 9px;
+  color: #7d847f;
+}
+
+.dropzoneHelper {
+  font-size: 8px;
+  color: #929994;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* Selected File Card */
+.selectedFileCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid rgba(30, 35, 32, 0.12);
+  border-radius: 10px;
+  background: #f8faf8;
+  gap: 12px;
+}
+
+.selectedFileInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.selectedFileIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eef3ff;
+  color: #1b4fd8;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.selectedFileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.selectedFileName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #171917;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.selectedFileSize {
+  font-size: 9px;
+  color: #8c938e;
+}
+
+.removeFileBtn {
+  background: none;
+  border: none;
+  color: #7d847f;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.removeFileBtn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.iconActionBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #7d847f;
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.iconActionBtn:hover {
+  background: #f0f3f0;
+  color: #171917;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: #202420;
+  color: #fff;
+  font-size: 8px;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 550;
+}
+
+.actionBtn:hover {
+  background: #111311;
 }
