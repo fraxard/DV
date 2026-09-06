@@ -1,5 +1,6 @@
-﻿const pool = require('../db');
+const pool = require('../db');
 const { Errors } = require('../utils/errors');
+const { logActivity } = require('./activity.service');
 
 const formatAsset = (row) => {
   if (!row) return row;
@@ -128,7 +129,16 @@ const createAsset = async (userId, data) => {
     ]
   );
 
-  return formatAsset(result.rows[0]);
+  const created = formatAsset(result.rows[0]);
+  logActivity({
+    userId,
+    action: 'asset_created',
+    title: `${created.name} added`,
+    category: created.category || 'other',
+    metadata: { assetId: created.id, name: created.name },
+  }).catch(() => {});
+
+  return created;
 };
 
 const updateAsset = async (userId, assetId, data) => {
@@ -199,10 +209,22 @@ const updateAsset = async (userId, assetId, data) => {
     ]
   );
 
-  return formatAsset(result.rows[0]);
+  const updated = formatAsset(result.rows[0]);
+  const isDetailsUpdate = data.metadata !== undefined && Object.keys(data).length === 1;
+  logActivity({
+    userId,
+    action: isDetailsUpdate ? 'asset_details_updated' : 'asset_updated',
+    title: isDetailsUpdate ? `${updated.name} details updated` : `${updated.name} updated`,
+    category: updated.category || 'other',
+    metadata: { assetId: updated.id, name: updated.name },
+  }).catch(() => {});
+
+  return updated;
 };
 
 const deleteAsset = async (userId, assetId) => {
+  const existing = await getAsset(userId, assetId);
+
   const result = await pool.query(
     `
       DELETE FROM assets
@@ -216,6 +238,14 @@ const deleteAsset = async (userId, assetId) => {
   if (result.rows.length === 0) {
     throw Errors.notFound('Asset not found.');
   }
+
+  logActivity({
+    userId,
+    action: 'asset_deleted',
+    title: `${existing.name} removed`,
+    category: existing.category || 'other',
+    metadata: { assetId, name: existing.name },
+  }).catch(() => {});
 
   return { id: result.rows[0].id };
 };

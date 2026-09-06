@@ -7,6 +7,7 @@ import {
   UploadCloud, UserCheck, UserPlus, UsersRound, WalletCards, X
 } from 'lucide-react';
 import styles from './WorkspacePage.module.css';
+import BottomNav from '../components/BottomNav';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -218,15 +219,18 @@ export default function WorkspacePage({ section }) {
   const hasNew = new URLSearchParams(location.search).get('new');
   const uploadParam = new URLSearchParams(location.search).get('upload');
 
-  // Documents, Assets, and Nominees live state
+  // Documents, Assets, Nominees, and Activities live state
   const [documents, setDocuments] = useState([]);
   const [assets, setAssets] = useState([]);
   const [nominees, setNominees] = useState([]);
+  const [activities, setActivities] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(section === 'documents');
   const [loadingAssets, setLoadingAssets] = useState(section === 'vault');
   const [loadingNominees, setLoadingNominees] = useState(section === 'nominees');
+  const [loadingActivities, setLoadingActivities] = useState(section === 'activity');
 
-  // Vault Category Filtering & Search state
+  // Vault Category Filtering & Category Modal state
+  const [activeCategoryModal, setActiveCategoryModal] = useState(null);
   const categoryParam = new URLSearchParams(location.search).get('category');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(categoryParam ? categoryParam.toLowerCase() : 'all');
@@ -335,6 +339,7 @@ export default function WorkspacePage({ section }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        if (activeCategoryModal) setActiveCategoryModal(null);
         if (isAddAssetOpen && !isSubmittingAsset) handleCloseAddAsset();
         if (assetToDelete && !isDeletingAsset) handleCloseDeleteAssetConfirm();
         if (allocatingAsset && !isSubmittingAssign) handleCloseAllocations();
@@ -348,7 +353,7 @@ export default function WorkspacePage({ section }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
-    isAddAssetOpen, isSubmittingAsset, assetToDelete, isDeletingAsset,
+    activeCategoryModal, isAddAssetOpen, isSubmittingAsset, assetToDelete, isDeletingAsset,
     allocatingAsset, isSubmittingAssign, isNomineeModalOpen, isSubmittingNominee,
     nomineeToDelete, isDeletingNominee, editingDocument, isUpdatingDoc,
     documentToDelete, isDeletingDoc, uploadParam, isUploading
@@ -399,6 +404,21 @@ export default function WorkspacePage({ section }) {
     }
   };
 
+  const fetchActivities = async () => {
+    try {
+      setLoadingActivities(true);
+      const res = await fetch(`${API_URL}/activity`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setActivities(data.activities || []);
+      }
+    } catch (err) {
+      console.error('Failed to load activities:', err);
+    } finally {
+      setLoadingActivities(false);
+    }
+  };
+
   useEffect(() => {
     if (isDocSection) {
       fetchDocuments();
@@ -410,6 +430,8 @@ export default function WorkspacePage({ section }) {
     } else if (isNomineeSection) {
       fetchNominees();
       fetchAssets();
+    } else if (section === 'activity') {
+      fetchActivities();
     }
   }, [section]);
 
@@ -1071,6 +1093,12 @@ export default function WorkspacePage({ section }) {
         [nominees.filter((n) => n.assigned_assets_count > 0).length.toString(), 'assigned to assets'],
         [nominees.filter((n) => n.assigned_assets_count === 0).length.toString(), 'unassigned'],
       ]
+    : section === 'activity'
+    ? [
+        [String(activities.length).padStart(2, '0'), 'recent events'],
+        [activities[0]?.relative_time || 'Recent', 'last activity'],
+        ['Protected', 'audit trail'],
+      ]
     : config.stats;
 
   return (
@@ -1295,113 +1323,142 @@ export default function WorkspacePage({ section }) {
                         </button>
                       </div>
                     ) : (
-                      Object.entries(groupedAssets).map(([catKey, catAssets]) => {
-                        const catMeta = getVaultCategoryMeta(catKey);
-                        const CatIcon = catMeta.icon;
-                        const catTotal = formatCategoryValuation(catAssets);
+                      <div className={styles.vaultCategoryGrid}>
+                        {Object.entries(groupedAssets).map(([catKey, catAssets]) => {
+                          const catMeta = getVaultCategoryMeta(catKey);
+                          const CatIcon = catMeta.icon;
+                          const catTotal = formatCategoryValuation(catAssets);
 
-                        return (
-                          <div className={styles.categorySection} key={catKey}>
-                            <div className={styles.categoryHeader}>
-                              <div className={styles.categoryHeaderMain}>
-                                <div className={styles.categoryHeaderIcon}>
-                                  <CatIcon size={16} />
-                                </div>
-                                <div>
-                                  <div className={styles.categoryHeaderTitleRow}>
-                                    <h3 className={styles.categoryTitle}>{catMeta.label}</h3>
-                                    <span className={styles.categoryBadge}>
+                          // If showing all categories and this category has more than 4 assets, show top 3 and a "View all" affordance
+                          const displayLimit = selectedCategory === 'all' && catAssets.length > 4 ? 3 : catAssets.length;
+                          const visibleAssets = catAssets.slice(0, displayLimit);
+                          const remainingCount = catAssets.length - displayLimit;
+
+                          return (
+                            <div className={styles.bentoCategoryCard} key={catKey}>
+                              <div>
+                                <div
+                                  className={styles.bentoHeader}
+                                  onClick={() => setActiveCategoryModal(catKey)}
+                                  role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      setActiveCategoryModal(catKey);
+                                    }
+                                  }}
+                                  title={`Open ${catMeta.label} category modal`}
+                                >
+                                  <div className={styles.bentoHeaderLeft}>
+                                    <div className={styles.bentoIconBadge}>
+                                      <CatIcon size={16} />
+                                    </div>
+                                    <div className={styles.bentoTitleGroup}>
+                                      <h3 className={styles.bentoCategoryName}>{catMeta.label}</h3>
+                                      <p className={styles.bentoCategoryDesc}>{catMeta.description}</p>
+                                    </div>
+                                  </div>
+                                  <div className={styles.bentoHeaderRight}>
+                                    <span className={styles.bentoCountBadge}>
                                       {catAssets.length} {catAssets.length === 1 ? 'asset' : 'assets'}
                                     </span>
+                                    {catTotal && (
+                                      <strong className={styles.bentoTotalValue}>{catTotal}</strong>
+                                    )}
                                   </div>
-                                  <p className={styles.categoryDesc}>{catMeta.description}</p>
+                                </div>
+
+                                <div className={styles.bentoAssetList} style={{ marginTop: '14px' }}>
+                                  {visibleAssets.map((asset) => {
+                                    const docCount = documents.filter((d) => d.asset_id === asset.id).length;
+                                    return (
+                                      <div
+                                        className={styles.bentoAssetRow}
+                                        key={asset.id}
+                                        onClick={() => navigate(`/vault/${asset.id}`)}
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            navigate(`/vault/${asset.id}`);
+                                          }
+                                        }}
+                                        title={`View details for ${asset.name}`}
+                                      >
+                                        <div className={styles.bentoAssetInfo}>
+                                          <strong className={styles.bentoAssetName}>{asset.name}</strong>
+                                          <span className={styles.bentoAssetSub}>
+                                            <span>{asset.subcategory || catMeta.label}</span>
+                                            <span>·</span>
+                                            <span className={styles.bentoAssetValue}>
+                                              {asset.estimated_value ? formatCurrency(asset.estimated_value, asset.currency) : 'Not valued'}
+                                            </span>
+                                            {docCount > 0 && <span>· {docCount} doc{docCount > 1 ? 's' : ''}</span>}
+                                          </span>
+                                        </div>
+
+                                        <div className={styles.bentoAssetControls}>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleOpenAllocations(asset);
+                                            }}
+                                            className={styles.bentoIconBtn}
+                                            title="Manage Nominees & Allocations"
+                                            aria-label="Manage Nominees & Allocations"
+                                          >
+                                            <UsersRound size={12} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleOpenEditAsset(asset);
+                                            }}
+                                            className={styles.bentoIconBtn}
+                                            title="Edit asset"
+                                            aria-label="Edit asset"
+                                          >
+                                            <Pencil size={12} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleOpenDeleteAssetConfirm(asset);
+                                            }}
+                                            className={styles.bentoIconBtn}
+                                            title="Delete asset"
+                                            aria-label="Delete asset"
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                          <span className={styles.bentoChevron}>
+                                            <ChevronRight size={13} />
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
-                              {catTotal && (
-                                <div className={styles.categoryTotal}>
-                                  <span className={styles.categoryTotalLabel}>Estimated Total</span>
-                                  <strong className={styles.categoryTotalValue}>{catTotal}</strong>
-                                </div>
+
+                              {remainingCount > 0 && (
+                                <button
+                                  type="button"
+                                  className={styles.bentoViewMore}
+                                  onClick={() => setSelectedCategory(catKey)}
+                                >
+                                  View all {catAssets.length} {catMeta.label.toLowerCase()} assets <ChevronRight size={11} />
+                                </button>
                               )}
                             </div>
-
-                            <div className={styles.categoryRows}>
-                              {catAssets.map((asset) => {
-                                const docCount = documents.filter((d) => d.asset_id === asset.id).length;
-                                return (
-                                  <div
-                                    className={`${styles.row} ${styles.clickableRow}`}
-                                    key={asset.id}
-                                    onClick={() => navigate(`/vault/${asset.id}`)}
-                                    role="button"
-                                    tabIndex={0}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        navigate(`/vault/${asset.id}`);
-                                      }
-                                    }}
-                                  >
-                                    <div className={styles.rowIcon}>
-                                      <CatIcon size={14} />
-                                    </div>
-                                    <div className={styles.rowMain}>
-                                      <strong>{asset.name}</strong>
-                                      <span>
-                                        {catMeta.label}
-                                        {asset.subcategory ? ` · ${asset.subcategory}` : ''}
-                                        {asset.estimated_value ? ` · ${formatCurrency(asset.estimated_value, asset.currency)}` : ' · Not valued'}
-                                        {docCount > 0 ? ` · ${docCount} ${docCount === 1 ? 'doc' : 'docs'}` : ''}
-                                      </span>
-                                    </div>
-                                    <div className={styles.itemActions}>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenAllocations(asset);
-                                        }}
-                                        className={styles.iconActionBtn}
-                                        title="Manage Nominees & Allocations"
-                                        aria-label="Manage Nominees & Allocations"
-                                        type="button"
-                                      >
-                                        <UsersRound size={13} />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenEditAsset(asset);
-                                        }}
-                                        className={styles.iconActionBtn}
-                                        title="Edit asset"
-                                        aria-label="Edit asset"
-                                        type="button"
-                                      >
-                                        <Pencil size={13} />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenDeleteAssetConfirm(asset);
-                                        }}
-                                        className={styles.iconActionBtn}
-                                        title="Delete asset"
-                                        aria-label="Delete asset"
-                                        type="button"
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
-                                      <span className={styles.rowChevron}>
-                                        <ChevronRight size={14} />
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 );
@@ -1450,6 +1507,45 @@ export default function WorkspacePage({ section }) {
                   </div>
                 ))
               )
+            ) : section === 'activity' ? (
+              loadingActivities ? (
+                <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
+                  Loading activity timeline...
+                </div>
+              ) : activities.length === 0 ? (
+                <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
+                  No recent activity recorded yet. Changes made to assets, nominees, documents, and allocations will appear here.
+                </div>
+              ) : (
+                activities.map((act) => {
+                  const ActIcon = act.category === 'nominees'
+                    ? UsersRound
+                    : act.category === 'documents'
+                      ? FileText
+                      : act.category === 'allocations'
+                        ? Percent
+                        : act.category === 'financial'
+                          ? Landmark
+                          : act.category === 'crypto'
+                            ? Coins
+                            : act.category === 'digital'
+                              ? Globe
+                              : act.category === 'insurance'
+                                ? ShieldCheck
+                                : FolderOpen;
+
+                  return (
+                    <div className={styles.row} key={act.id}>
+                      <div className={styles.rowIcon}><ActIcon size={14} /></div>
+                      <div className={styles.rowMain}>
+                        <strong>{act.title}</strong>
+                        <span>{act.category_label || act.category} · {act.relative_time || new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <span className={styles.status}>Recorded</span>
+                    </div>
+                  );
+                })
+              )
             ) : (
               config.rows.map(([title, meta, status]) => (
                 <div className={styles.row} key={`${title}-${meta}`}>
@@ -1465,7 +1561,7 @@ export default function WorkspacePage({ section }) {
           </div>
         </section>
 
-        {!isDocSection && !isVaultSection && !isNomineeSection && (
+        {!isDocSection && !isVaultSection && !isNomineeSection && section !== 'activity' && (
           <section className={styles.empty}>
             <Search size={15} />
             <div>
@@ -2349,17 +2445,121 @@ export default function WorkspacePage({ section }) {
             </div>
           </div>
         )}
+
+        {/* =========================================================
+            CATEGORY EXPLORER MODAL
+            ========================================================= */}
+        {activeCategoryModal && (() => {
+          const catMeta = getVaultCategoryMeta(activeCategoryModal);
+          const CatIcon = catMeta.icon;
+          const catAssets = assets.filter(
+            (a) => (a.category || 'other').toLowerCase().trim() === activeCategoryModal
+          );
+          const catTotal = formatCategoryValuation(catAssets);
+
+          return (
+            <div
+              className={styles.uploadModalOverlay}
+              onClick={() => setActiveCategoryModal(null)}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="category-modal-title"
+            >
+              <div
+                className={styles.uploadModal}
+                style={{ maxWidth: '520px' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.modalHead}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className={styles.bentoIconBadge}>
+                      <CatIcon size={16} />
+                    </div>
+                    <div>
+                      <h3 id="category-modal-title" style={{ fontSize: '14px', margin: 0 }}>
+                        {catMeta.label}
+                      </h3>
+                      <span style={{ fontSize: '10px', color: '#7d847f' }}>
+                        {catAssets.length} {catAssets.length === 1 ? 'asset' : 'assets'}
+                        {catTotal ? ` · ${catTotal}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.closeBtn}
+                    onClick={() => setActiveCategoryModal(null)}
+                    aria-label="Close"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                <div className={styles.categoryModalList}>
+                  {catAssets.length === 0 ? (
+                    <div style={{ padding: '24px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
+                      No assets found in this category.
+                    </div>
+                  ) : (
+                    catAssets.map((asset) => {
+                      const docCount = documents.filter((d) => d.asset_id === asset.id).length;
+                      return (
+                        <div
+                          key={asset.id}
+                          className={styles.categoryModalRow}
+                          onClick={() => {
+                            setActiveCategoryModal(null);
+                            navigate(`/vault/${asset.id}`);
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setActiveCategoryModal(null);
+                              navigate(`/vault/${asset.id}`);
+                            }
+                          }}
+                          title={`View ${asset.name}`}
+                        >
+                          <div className={styles.bentoAssetInfo}>
+                            <strong className={styles.bentoAssetName}>{asset.name}</strong>
+                            <span className={styles.bentoAssetSub}>
+                              <span>{asset.subcategory || catMeta.label}</span>
+                              <span>·</span>
+                              <span className={styles.bentoAssetValue}>
+                                {asset.estimated_value ? formatCurrency(asset.estimated_value, asset.currency) : 'Not valued'}
+                              </span>
+                              {docCount > 0 && <span>· {docCount} doc{docCount > 1 ? 's' : ''}</span>}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className={styles.bentoChevron}>
+                              <ChevronRight size={14} />
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className={styles.modalActions} style={{ marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={() => setActiveCategoryModal(null)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </main>
 
-      <nav className={styles.bottomNav}>
-        <Link to="/dashboard">DV.</Link>
-        <Link className={section === 'vault' ? styles.active : ''} to="/vault">Vault</Link>
-        <Link className={section === 'nominees' ? styles.active : ''} to="/nominees">Nominees</Link>
-        <Link className={section === 'activity' ? styles.active : ''} to="/activity">Activity</Link>
-        <Link className={section === 'documents' ? styles.active : ''} to="/documents">Documents</Link>
-        <Link className={section === 'calendar' ? styles.active : ''} to="/calendar">Calendar</Link>
-        <Link className={section === 'settings' ? styles.active : ''} to="/settings">Settings</Link>
-      </nav>
+      <BottomNav />
     </div>
   );
 }

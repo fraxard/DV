@@ -4,9 +4,11 @@ import {
   ArrowLeft, Building, Landmark, Coins, ShieldCheck, Globe, FileText,
   Briefcase, TrendingUp, FolderOpen, Pencil, Trash2, UsersRound, Plus,
   UploadCloud, FileCheck, Download, Check, AlertTriangle, X, LayoutDashboard,
-  Settings, UserPlus, Info, Calendar
+  Settings, UserPlus, Info, Calendar, Copy, CheckCheck
 } from 'lucide-react';
 import styles from './AssetDetails.module.css';
+import { getCategoryFieldConfig } from '../config/assetCategoryFields';
+import BottomNav from '../components/BottomNav';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -126,6 +128,13 @@ export default function AssetDetails() {
   });
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const [editFormError, setEditFormError] = useState('');
+
+  // Edit Category Information Modal
+  const [isEditCategoryInfoOpen, setIsEditCategoryInfoOpen] = useState(false);
+  const [categoryInfoFormData, setCategoryInfoFormData] = useState({});
+  const [isSavingCategoryInfo, setIsSavingCategoryInfo] = useState(false);
+  const [categoryInfoError, setCategoryInfoError] = useState('');
+  const [copiedFieldKey, setCopiedFieldKey] = useState(null);
 
   // Delete Asset Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -303,6 +312,89 @@ export default function AssetDetails() {
       setEditFormError('An unexpected error occurred while saving.');
     } finally {
       setIsSubmittingEdit(false);
+    }
+  };
+
+  // Handle Category Information Edit
+  const handleOpenEditCategoryInfo = () => {
+    if (!asset) return;
+    setCategoryInfoError('');
+    const config = getCategoryFieldConfig(asset.category);
+    const initialData = {};
+    config.fields.forEach((field) => {
+      initialData[field.key] = asset.metadata && asset.metadata[field.key] !== undefined && asset.metadata[field.key] !== null
+        ? asset.metadata[field.key]
+        : '';
+    });
+    setCategoryInfoFormData(initialData);
+    setIsEditCategoryInfoOpen(true);
+  };
+
+  const handleCloseEditCategoryInfo = () => {
+    if (isSavingCategoryInfo) return;
+    setIsEditCategoryInfoOpen(false);
+    setCategoryInfoError('');
+  };
+
+  const handleSaveCategoryInfoSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setIsSavingCategoryInfo(true);
+      setCategoryInfoError('');
+
+      // Merge updated fields with existing asset metadata (preserving other keys if any)
+      const updatedMetadata = {
+        ...(asset.metadata || {}),
+        ...categoryInfoFormData,
+      };
+
+      // Clean empty strings or whitespace-only strings to null or omit
+      const cleanedMetadata = {};
+      Object.entries(updatedMetadata).forEach(([k, v]) => {
+        if (typeof v === 'string') {
+          const trimmed = v.trim();
+          if (trimmed.length > 0) {
+            cleanedMetadata[k] = trimmed;
+          }
+        } else if (v !== null && v !== undefined) {
+          cleanedMetadata[k] = v;
+        }
+      });
+
+      const res = await fetch(`${API_URL}/vault/assets/${assetId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ metadata: cleanedMetadata }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setCategoryInfoError(data.error?.message || 'Failed to update category information.');
+        return;
+      }
+
+      setAsset(data.asset);
+      setIsEditCategoryInfoOpen(false);
+    } catch (err) {
+      console.error('Error updating category metadata:', err);
+      setCategoryInfoError('An error occurred while saving category details.');
+    } finally {
+      setIsSavingCategoryInfo(false);
+    }
+  };
+
+  // Copy to Clipboard with temporary badge
+  const handleCopyField = async (key, val) => {
+    if (!val) return;
+    try {
+      await navigator.clipboard.writeText(String(val));
+      setCopiedFieldKey(key);
+      setTimeout(() => {
+        setCopiedFieldKey((curr) => (curr === key ? null : curr));
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
     }
   };
 
@@ -646,10 +738,26 @@ export default function AssetDetails() {
   return (
     <div className={styles.shell}>
       <main className={styles.content}>
-        {/* Navigation Breadcrumb */}
-        <Link to="/vault" className={styles.back}>
-          <ArrowLeft size={12} /> Back to Vault
-        </Link>
+        {/* Breadcrumb / Back Path */}
+        <nav className={styles.breadcrumbNav} aria-label="Breadcrumb">
+          <div className={styles.breadcrumbRow}>
+            <Link to="/vault" className={styles.breadcrumbLink}>
+              Vault
+            </Link>
+            <span className={styles.breadcrumbSeparator}>/</span>
+            <Link to={`/vault?category=${encodeURIComponent(asset.category)}`} className={styles.breadcrumbLink}>
+              {categoryMeta.label}
+            </Link>
+            <span className={styles.breadcrumbSeparator}>/</span>
+            <span className={styles.breadcrumbCurrent} title={asset.name}>
+              {asset.name}
+            </span>
+          </div>
+
+          <Link to="/vault" className={styles.backBtn} title="Back to Vault">
+            <ArrowLeft size={12} /> Back to Vault
+          </Link>
+        </nav>
 
         {/* Asset Header */}
         <header className={styles.header}>
@@ -685,282 +793,417 @@ export default function AssetDetails() {
           </div>
         </header>
 
-        {/* Overview Metric Grid */}
+        {/* Layer 1 — At a Glance Summary Strip (Single horizontal row of 4 columns on desktop) */}
         <div className={styles.overviewGrid}>
+          {/* 1. Asset Value */}
           <div className={styles.metricCard}>
             <span className={styles.metricLabel}>Asset Value</span>
             <strong className={styles.metricValue}>
               {formatCurrency(asset.estimated_value, asset.currency)}
             </strong>
-            <span className={styles.metricSub}>Currency: {asset.currency || 'INR'}</span>
+            <span className={styles.metricSub}>
+              {asset.estimated_value ? `Currency: ${asset.currency || 'INR'}` : (
+                <button
+                  type="button"
+                  className={styles.metricSubAction}
+                  onClick={handleOpenEditAsset}
+                >
+                  <Pencil size={10} /> Set estimated value
+                </button>
+              )}
+            </span>
           </div>
 
+          {/* 2. Category */}
           <div className={styles.metricCard}>
             <span className={styles.metricLabel}>Category</span>
             <strong className={styles.metricValue}>{categoryMeta.label}</strong>
-            <span className={styles.metricSub}>{asset.subcategory || 'Standard entry'}</span>
+            <span className={styles.metricSub}>
+              {asset.subcategory ? asset.subcategory : (
+                asset.metadata && Object.keys(asset.metadata).length > 0
+                  ? 'Details configured'
+                  : 'Standard entry'
+              )}
+            </span>
           </div>
 
+          {/* 3. Valuation Date */}
           <div className={styles.metricCard}>
             <span className={styles.metricLabel}>Valuation Date</span>
-            <strong className={styles.metricValue} style={{ fontSize: '16px' }}>
+            <strong className={styles.metricValue}>
               {asset.valuation_date ? asset.valuation_date : 'Not specified'}
             </strong>
             <span className={styles.metricSub}>
-              {asset.valuation_date ? 'Recorded appraisal' : 'No valuation date'}
+              {asset.valuation_date ? (
+                'Recorded appraisal'
+              ) : (
+                <button
+                  type="button"
+                  className={styles.metricSubAction}
+                  onClick={handleOpenEditAsset}
+                >
+                  <Calendar size={10} /> Add appraisal date
+                </button>
+              )}
             </span>
           </div>
 
+          {/* 4. Allocation Status */}
           <div className={styles.metricCard}>
             <span className={styles.metricLabel}>Allocation Status</span>
-            <strong className={styles.metricValue} style={{ color: totalAllocated === 100 ? '#16a34a' : '#2563eb' }}>
+            <strong className={styles.metricValue} style={{ color: totalAllocated === 100 ? '#16a34a' : '#1b4fd8' }}>
               {formatCleanPercent(totalAllocated)}
             </strong>
-            <span className={styles.metricSub}>
-              {totalAllocated === 100 ? 'Fully allocated' : `${formatCleanPercent(remainingAllocated)} unallocated`}
-            </span>
+            <div>
+              <div className={styles.metricProgressTrack}>
+                <div
+                  className={`${styles.metricProgressFill} ${totalAllocated === 100 ? styles.metricProgressFillFull : ''}`}
+                  style={{ width: `${Math.min(100, totalAllocated)}%` }}
+                />
+              </div>
+              <span className={styles.metricSub} style={{ marginTop: '4px' }}>
+                {totalAllocated === 100 ? (
+                  '100% designated'
+                ) : remainingAllocated === 100 ? (
+                  'Unallocated'
+                ) : (
+                  `${formatCleanPercent(remainingAllocated)} remaining`
+                )}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Overview / Notes Panel */}
-        <section className={styles.section}>
-          <div className={styles.panel}>
-            <div className={styles.sectionHeader} style={{ marginBottom: '8px' }}>
+        {/* Layer 2 — 2x2 Detail Workspace Grid (Row 1: Overview & Notes + Category Info, Row 2: Documents + Beneficiary Allocations) */}
+        <div className={styles.contentGrid}>
+          {/* 1. Overview & Notes Panel */}
+          <section className={styles.section}>
+            <div className={styles.sectionHeader} style={{ marginBottom: '12px' }}>
               <span className={styles.sectionTitle}>Overview & Notes</span>
-            </div>
-            <div className={styles.descriptionBox}>
-              {asset.description ? asset.description : 'No description or specific notes recorded for this asset.'}
-            </div>
-            <div className={styles.metaTimestamps}>
-              <span>Recorded on {new Date(asset.created_at).toLocaleDateString()}</span>
-              <span>Last updated {new Date(asset.updated_at).toLocaleDateString()}</span>
-            </div>
-          </div>
-        </section>
-
-        {/* Asset Information / Metadata Section */}
-        <section className={styles.section}>
-          <div className={styles.panel}>
-            <div className={styles.sectionHeader}>
-              <span className={styles.sectionTitle}>
-                <Info size={14} /> Asset Information
-              </span>
-            </div>
-            {metadataEntries.length > 0 ? (
-              <div className={styles.metadataGrid}>
-                {metadataEntries.map(([key, val]) => (
-                  <div className={styles.metaItem} key={key}>
-                    <span className={styles.metaKey}>{key.replace(/_/g, ' ')}</span>
-                    <span className={styles.metaVal}>
-                      {typeof val === 'boolean' ? (val ? 'Yes' : 'No') : typeof val === 'object' ? JSON.stringify(val) : String(val)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.emptyState}>
-                <p>No additional metadata or custom properties recorded for this asset.</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Attached Documents Section */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitle}>
-              <FileText size={15} /> Attached Documents
-              <span className={styles.sectionCount}>{documents.length}</span>
-            </div>
-            <button
-              type="button"
-              className={styles.submitBtn}
-              style={{ padding: '6px 12px', fontSize: '10px' }}
-              onClick={handleOpenUpload}
-            >
-              <Plus size={12} /> Upload Document
-            </button>
-          </div>
-
-          <div className={styles.panel} style={{ padding: '16px' }}>
-            {loadingDocs ? (
-              <div className={styles.emptyState}>Loading attached documents...</div>
-            ) : documents.length === 0 ? (
-              <div className={styles.emptyState}>
-                <p>No documents attached to this asset yet. Upload deeds, account statements, policies, or proof of ownership.</p>
+              {asset.description && (
                 <button
                   type="button"
                   className={styles.actionBtn}
-                  onClick={handleOpenUpload}
-                  style={{ display: 'inline-flex', margin: '0 auto' }}
+                  onClick={handleOpenEditAsset}
+                  title="Edit description or notes"
                 >
-                  <Plus size={12} /> Upload First Document
+                  <Pencil size={12} /> Edit Notes
                 </button>
-              </div>
-            ) : (
-              <div className={styles.docList}>
-                {documents.map((doc) => (
-                  <div className={styles.docItem} key={doc.id}>
-                    <div className={styles.docInfo}>
-                      <div className={styles.docIcon}>
-                        <FileText size={16} />
-                      </div>
-                      <div className={styles.docMeta}>
-                        <span className={styles.docName} title={doc.name}>{doc.name}</span>
-                        <span className={styles.docSub}>
-                          {doc.file_name} · {formatBytes(doc.file_size)} · {new Date(doc.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className={styles.docActions}>
-                      <button
-                        type="button"
-                        className={styles.iconBtn}
-                        onClick={() => handleDownloadDoc(doc.id, doc.file_name)}
-                        title="Download file"
-                        aria-label="Download file"
-                      >
-                        <Download size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-                        onClick={() => setDocumentToDelete(doc)}
-                        title="Delete document"
-                        aria-label="Delete document"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Nominees & Beneficiary Allocations Section */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitle}>
-              <UsersRound size={15} /> Beneficiary Allocations
-              <span className={styles.sectionCount}>{allocations.length}</span>
+              )}
             </div>
-            {allocations.length > 0 && remainingAllocated > 0 && availableNominees.length > 0 && (
+            <div className={styles.panel}>
+              {asset.description ? (
+                <>
+                  <div className={styles.descriptionBox}>
+                    {asset.description}
+                  </div>
+                  <div className={styles.metaTimestamps} style={{ marginTop: 'auto' }}>
+                    <span>Recorded on {new Date(asset.created_at).toLocaleDateString()}</span>
+                    <span>Last updated {new Date(asset.updated_at).toLocaleDateString()}</span>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.emptyState}>
+                  <p>No description or notes have been added yet.</p>
+                  <button
+                    type="button"
+                    className={styles.actionBtn}
+                    onClick={handleOpenEditAsset}
+                    style={{ display: 'inline-flex', margin: '0 auto' }}
+                  >
+                    <Plus size={12} /> Add Notes
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* 2. Asset Information / Dynamic Category Information Section */}
+          {(() => {
+            const categoryConfig = getCategoryFieldConfig(asset.category);
+            const configuredFields = categoryConfig.fields || [];
+
+            // Collect any extra custom metadata keys that might not be in the configured fields
+            const configuredKeysSet = new Set(configuredFields.map((f) => f.key));
+            const extraEntries = asset.metadata && typeof asset.metadata === 'object'
+              ? Object.entries(asset.metadata).filter(
+                  ([k, v]) => !configuredKeysSet.has(k) && v !== null && v !== undefined && v !== ''
+                )
+              : [];
+
+            const hasAnyMetadata = configuredFields.some(
+              (f) => asset.metadata && asset.metadata[f.key] !== undefined && asset.metadata[f.key] !== null && asset.metadata[f.key] !== ''
+            ) || extraEntries.length > 0;
+
+            return (
+              <section className={styles.section}>
+                <div className={styles.sectionHeader} style={{ marginBottom: '12px' }}>
+                  <span className={styles.sectionTitle}>
+                    <Info size={14} /> {categoryConfig.label} Information
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.actionBtn}
+                    onClick={handleOpenEditCategoryInfo}
+                    title="Edit category specific properties"
+                  >
+                    <Pencil size={12} /> Edit Details
+                  </button>
+                </div>
+
+                <div className={styles.panel}>
+                  {hasAnyMetadata ? (
+                    <>
+                      <div className={styles.categoryInfoGrid}>
+                        {configuredFields
+                          .filter((field) => {
+                            const rawVal = asset.metadata ? asset.metadata[field.key] : null;
+                            return rawVal !== null && rawVal !== undefined && String(rawVal).trim() !== '';
+                          })
+                          .map((field) => {
+                            const rawVal = asset.metadata[field.key];
+                            const displayVal = String(rawVal);
+                            const isCopyable = field.copyable;
+                            const isCopied = copiedFieldKey === field.key;
+
+                            return (
+                              <div className={styles.categoryFieldCard} key={field.key}>
+                                <span className={styles.fieldLabel}>{field.label}</span>
+                                <div className={styles.fieldValueRow}>
+                                  <span className={styles.fieldValue}>
+                                    {displayVal}
+                                  </span>
+                                  {isCopyable && (
+                                    <button
+                                      type="button"
+                                      className={styles.copyBtn}
+                                      onClick={() => handleCopyField(field.key, rawVal)}
+                                      title={`Copy ${field.label}`}
+                                    >
+                                      {isCopied ? (
+                                        <span className={styles.copiedBadge}>
+                                          <CheckCheck size={11} /> Copied
+                                        </span>
+                                      ) : (
+                                        <>
+                                          <Copy size={11} /> Copy
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      {extraEntries.length > 0 && (
+                        <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid rgba(30,35,32,0.06)' }}>
+                          <span className={styles.fieldLabel} style={{ marginBottom: '10px', display: 'block' }}>
+                            Additional Custom Properties
+                          </span>
+                          <div className={styles.metadataGrid}>
+                            {extraEntries.map(([key, val]) => (
+                              <div className={styles.metaItem} key={key}>
+                                <span className={styles.metaKey}>{key.replace(/_/g, ' ')}</span>
+                                <span className={styles.metaVal}>
+                                  {typeof val === 'boolean' ? (val ? 'Yes' : 'No') : typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className={styles.emptyState}>
+                      <p>No {categoryConfig.label.toLowerCase()} details have been added yet.</p>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={handleOpenEditCategoryInfo}
+                        style={{ display: 'inline-flex', margin: '0 auto' }}
+                      >
+                        <Plus size={12} /> Add {categoryConfig.label} Details
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            );
+          })()}
+
+          {/* 3. Attached Documents Section */}
+          <section className={styles.section}>
+            <div className={styles.sectionHeader} style={{ marginBottom: '12px' }}>
+              <div className={styles.sectionTitle}>
+                <FileText size={15} /> Attached Documents
+                <span className={styles.sectionCount}>{documents.length}</span>
+              </div>
               <button
                 type="button"
                 className={styles.submitBtn}
                 style={{ padding: '6px 12px', fontSize: '10px' }}
-                onClick={handleOpenAssignNominee}
+                onClick={handleOpenUpload}
               >
-                <UserPlus size={12} /> Assign Nominee
+                <Plus size={12} /> Upload
               </button>
-            )}
-          </div>
-
-          <div className={styles.panel} style={{ padding: '16px' }}>
-            {/* Visual Allocation Progress Gauge */}
-            <div className={styles.allocationGauge}>
-              <div className={styles.gaugeMeta}>
-                <span className={styles.gaugeLabel}>Total Allocated Share</span>
-                <span className={styles.gaugeValue}>{formatCleanPercent(totalAllocated)} / 100%</span>
-              </div>
-              <div className={styles.gaugeTrack}>
-                <div
-                  className={`${styles.gaugeFill} ${totalAllocated === 100 ? styles.gaugeFillFull : ''}`}
-                  style={{ width: `${Math.min(100, totalAllocated)}%` }}
-                />
-              </div>
-              <div className={styles.gaugeFootnote}>
-                {remainingAllocated > 0
-                  ? `${formatCleanPercent(remainingAllocated)} remaining to be allocated.`
-                  : '100% fully allocated across designated beneficiaries.'}
-              </div>
             </div>
 
-            {loadingAllocations ? (
-              <div className={styles.emptyState}>Loading beneficiary allocations...</div>
-            ) : allocations.length === 0 ? (
-              <div className={styles.emptyState}>
-                <p>No beneficiaries assigned to this asset yet. Designate trusted nominees to allocate inheritance shares.</p>
+            <div className={styles.panel} style={{ padding: '16px' }}>
+              {loadingDocs ? (
+                <div className={styles.emptyState}>Loading attached documents...</div>
+              ) : documents.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <p>No documents attached yet.</p>
+                  <button
+                    type="button"
+                    className={styles.actionBtn}
+                    onClick={handleOpenUpload}
+                    style={{ display: 'inline-flex', margin: '0 auto' }}
+                  >
+                    <Plus size={12} /> Upload First Document
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.docList}>
+                  {documents.map((doc) => (
+                    <div className={styles.docItem} key={doc.id}>
+                      <div className={styles.docInfo}>
+                        <div className={styles.docIcon}>
+                          <FileText size={16} />
+                        </div>
+                        <div className={styles.docMeta}>
+                          <span className={styles.docName} title={doc.name}>{doc.name}</span>
+                          <span className={styles.docSub}>
+                            {doc.file_name} · {formatBytes(doc.file_size)} · {new Date(doc.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className={styles.docActions}>
+                        <button
+                          type="button"
+                          className={styles.iconBtn}
+                          onClick={() => handleDownloadDoc(doc.id, doc.file_name)}
+                          title="Download file"
+                          aria-label="Download file"
+                        >
+                          <Download size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+                          onClick={() => setDocumentToDelete(doc)}
+                          title="Delete document"
+                          aria-label="Delete document"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* 4. Nominees & Beneficiary Allocations Section */}
+          <section className={styles.section}>
+            <div className={styles.sectionHeader} style={{ marginBottom: '12px' }}>
+              <div className={styles.sectionTitle}>
+                <UsersRound size={15} /> Beneficiary Allocations
+                <span className={styles.sectionCount}>{allocations.length}</span>
+              </div>
+              {allocations.length > 0 && remainingAllocated > 0 && availableNominees.length > 0 && (
                 <button
                   type="button"
-                  className={styles.actionBtn}
+                  className={styles.submitBtn}
+                  style={{ padding: '6px 12px', fontSize: '10px' }}
                   onClick={handleOpenAssignNominee}
-                  style={{ display: 'inline-flex', margin: '0 auto' }}
                 >
-                  <UserPlus size={12} /> Assign Beneficiary
+                  <UserPlus size={12} /> Assign
                 </button>
+              )}
+            </div>
+
+            <div className={styles.panel} style={{ padding: '16px' }}>
+              {/* Visual Allocation Progress Gauge */}
+              <div className={styles.allocationGauge}>
+                <div className={styles.gaugeMeta}>
+                  <span className={styles.gaugeLabel}>Total Allocated Share</span>
+                  <span className={styles.gaugeValue}>{formatCleanPercent(totalAllocated)} / 100%</span>
+                </div>
+                <div className={styles.gaugeTrack}>
+                  <div
+                    className={`${styles.gaugeFill} ${totalAllocated === 100 ? styles.gaugeFillFull : ''}`}
+                    style={{ width: `${Math.min(100, totalAllocated)}%` }}
+                  />
+                </div>
+                <div className={styles.gaugeFootnote}>
+                  {remainingAllocated > 0
+                    ? `${formatCleanPercent(remainingAllocated)} remaining to be allocated.`
+                    : '100% fully allocated across designated beneficiaries.'}
+                </div>
               </div>
-            ) : (
-              <div className={styles.nomineeList}>
-                {allocations.map((item) => (
-                  <div className={styles.nomineeItem} key={item.nominee_id}>
-                    <div className={styles.nomineeInfo}>
-                      <span className={styles.nomineeName}>{item.nominee_name}</span>
-                      <span className={styles.nomineeSub}>
-                        {item.nominee_relationship} · {item.nominee_email}
-                      </span>
+
+              {loadingAllocations ? (
+                <div className={styles.emptyState}>Loading beneficiary allocations...</div>
+              ) : allocations.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <p>No beneficiaries assigned yet.</p>
+                  <button
+                    type="button"
+                    className={styles.actionBtn}
+                    onClick={handleOpenAssignNominee}
+                    style={{ display: 'inline-flex', margin: '0 auto' }}
+                  >
+                    <UserPlus size={12} /> Assign Beneficiary
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.nomineeList}>
+                  {allocations.map((item) => (
+                    <div className={styles.nomineeItem} key={item.nominee_id}>
+                      <div className={styles.nomineeInfo}>
+                        <span className={styles.nomineeName}>{item.nominee_name}</span>
+                        <span className={styles.nomineeSub}>
+                          {item.nominee_relationship} · {item.nominee_email}
+                        </span>
+                      </div>
+
+                      <div className={styles.nomineeControls}>
+                        <span className={styles.allocBadge}>
+                          {formatCleanPercent(item.allocation_percentage)}
+                        </span>
+                        {item.can_view && <span className={styles.permBadge}>Can View</span>}
+                        {item.can_download_docs && <span className={styles.permBadge}>Can Download</span>}
+
+                        <button
+                          type="button"
+                          className={styles.iconBtn}
+                          onClick={() => handleOpenEditAssignment(item)}
+                          title="Edit allocation percentage"
+                          aria-label="Edit allocation percentage"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+                          onClick={() => handleRemoveNominee(item.nominee_id)}
+                          title="Remove nominee"
+                          aria-label="Remove nominee"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
-
-                    <div className={styles.nomineeControls}>
-                      <span className={styles.allocBadge}>
-                        {formatCleanPercent(item.allocation_percentage)}
-                      </span>
-                      {item.can_view && <span className={styles.permBadge}>Can View</span>}
-                      {item.can_download_docs && <span className={styles.permBadge}>Can Download</span>}
-
-                      <button
-                        type="button"
-                        className={styles.iconBtn}
-                        onClick={() => handleOpenEditAssignment(item)}
-                        title="Edit allocation percentage"
-                        aria-label="Edit allocation percentage"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-                        onClick={() => handleRemoveNominee(item.nominee_id)}
-                        title="Remove nominee"
-                        aria-label="Remove nominee"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Floating Bottom Navigation */}
-        <nav className={styles.bottomNav}>
-          <div className={styles.navLinks}>
-            <Link to="/dashboard" className={styles.navLink}>
-              <LayoutDashboard size={14} />
-              <span>Overview</span>
-            </Link>
-            <Link to="/vault" className={`${styles.navLink} ${styles.activeNavLink}`}>
-              <FolderOpen size={14} />
-              <span>Vault</span>
-            </Link>
-            <Link to="/nominees" className={styles.navLink}>
-              <UsersRound size={14} />
-              <span>Nominees</span>
-            </Link>
-            <Link to="/documents" className={styles.navLink}>
-              <FileText size={14} />
-              <span>Documents</span>
-            </Link>
-            <Link to="/settings" className={styles.navLink}>
-              <Settings size={14} />
-              <span>Settings</span>
-            </Link>
-          </div>
-        </nav>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
 
         {/* =========================================================
             EDIT ASSET MODAL
@@ -1437,7 +1680,144 @@ export default function AssetDetails() {
             </div>
           );
         })()}
+
+        {/* Edit Category Information Modal */}
+        {isEditCategoryInfoOpen && (() => {
+          const categoryConfig = getCategoryFieldConfig(asset.category);
+          const fields = categoryConfig.fields || [];
+
+          return (
+            <div className={styles.modalOverlay} onClick={handleCloseEditCategoryInfo}>
+              <div
+                className={styles.modalCard}
+                style={{ maxWidth: '580px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.modalHeader}>
+                  <div>
+                    <h3 className={styles.modalTitle}>Edit {categoryConfig.label} Details</h3>
+                    <p style={{ fontSize: '11px', color: '#7a827c', margin: '3px 0 0' }}>
+                      Update specific properties and specifications for this {categoryConfig.label.toLowerCase()} record.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.closeBtn}
+                    onClick={handleCloseEditCategoryInfo}
+                    disabled={isSavingCategoryInfo}
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                {categoryInfoError && (
+                  <div className={styles.formError} style={{ margin: '14px 20px 0' }}>
+                    <AlertTriangle size={13} />
+                    <span>{categoryInfoError}</span>
+                  </div>
+                )}
+
+                <form
+                  onSubmit={handleSaveCategoryInfoSubmit}
+                  style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+                >
+                  <div
+                    className={styles.modalBody}
+                    style={{
+                      overflowY: 'auto',
+                      padding: '16px 20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px',
+                    }}
+                  >
+                    {fields.map((field) => {
+                      const value = categoryInfoFormData[field.key] !== undefined ? categoryInfoFormData[field.key] : '';
+
+                      return (
+                        <div className={styles.formGroup} key={field.key}>
+                          <label className={styles.formLabel}>
+                            {field.label}
+                            {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+                          </label>
+
+                          {field.type === 'select' ? (
+                            <select
+                              className={styles.formSelect}
+                              value={value}
+                              onChange={(e) =>
+                                setCategoryInfoFormData({
+                                  ...categoryInfoFormData,
+                                  [field.key]: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">{field.placeholder || `Select ${field.label}`}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          ) : field.type === 'textarea' ? (
+                            <textarea
+                              className={styles.formTextarea}
+                              rows={3}
+                              placeholder={field.placeholder || ''}
+                              value={value}
+                              onChange={(e) =>
+                                setCategoryInfoFormData({
+                                  ...categoryInfoFormData,
+                                  [field.key]: e.target.value,
+                                })
+                              }
+                            />
+                          ) : (
+                            <input
+                              type={field.type === 'date' ? 'date' : 'text'}
+                              className={styles.formInput}
+                              placeholder={field.placeholder || ''}
+                              value={value}
+                              onChange={(e) =>
+                                setCategoryInfoFormData({
+                                  ...categoryInfoFormData,
+                                  [field.key]: e.target.value,
+                                })
+                              }
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className={styles.modalActions} style={{ padding: '14px 20px', borderTop: '1px solid var(--w-line)' }}>
+                    <button
+                      type="button"
+                      className={styles.cancelBtn}
+                      onClick={handleCloseEditCategoryInfo}
+                      disabled={isSavingCategoryInfo}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className={styles.submitBtn}
+                      disabled={isSavingCategoryInfo}
+                    >
+                      <Check size={12} />
+                      {isSavingCategoryInfo ? 'Saving Details...' : 'Save Category Details'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          );
+        })()}
       </main>
+
+      {/* Floating Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }

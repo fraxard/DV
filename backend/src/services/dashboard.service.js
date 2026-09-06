@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { listActivities } = require('./activity.service');
 
 /**
  * Calculates the Legacy Readiness Score (0 - 100) based on component weights:
@@ -311,6 +312,9 @@ async function getOwnerDashboardData({ userId, emailVerified }) {
     assetsWithoutDocuments,
   });
 
+  // 7. RECENT ACTIVITY (Tenant-isolated, newest first)
+  const recentActivity = await listActivities(userId, 10);
+
   return {
     assets: {
       total: totalAssets,
@@ -339,6 +343,7 @@ async function getOwnerDashboardData({ userId, emailVerified }) {
       components: readiness.components,
     },
     needsAttention,
+    recentActivity,
   };
 }
 

@@ -119,48 +119,175 @@
   color: #991b1b;
 }
 
-/* Overview Cards Grid */
+.breadcrumbNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.breadcrumbRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #7d847f;
+}
+
+.breadcrumbLink {
+  color: #737a75;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.breadcrumbLink:hover {
+  color: #171917;
+}
+
+.breadcrumbSeparator {
+  color: #aeb5b0;
+  font-size: 10px;
+}
+
+.breadcrumbCurrent {
+  color: #171917;
+  font-weight: 600;
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #555d57;
+  font-size: 11px;
+  font-weight: 550;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--w-line);
+  padding: 5px 10px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.backBtn:hover {
+  color: #171917;
+  background: #ffffff;
+  border-color: rgba(30, 35, 32, 0.16);
+}
+
+/* Overview Summary Strip: 4 columns in one horizontal row on desktop */
 .overviewGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 24px;
 }
 
 .metricCard {
   border: 1px solid var(--w-line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, .82);
-  box-shadow: 0 10px 24px rgba(45, 53, 48, .04), inset 0 1px 0 rgba(255, 255, 255, .85);
-  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .86);
+  box-shadow: 0 8px 20px rgba(45, 53, 48, .04), inset 0 1px 0 rgba(255, 255, 255, .9);
+  padding: 13px 16px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  min-height: 82px;
   gap: 4px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.metricCard:hover {
+  border-color: rgba(30, 35, 32, 0.15);
 }
 
 .metricLabel {
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   color: #8a918c;
   text-transform: uppercase;
 }
 
 .metricValue {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
   color: #171917;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metricSub {
   font-size: 10px;
   color: #8c938e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.metricSubAction {
+  color: #1b4fd8;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: inherit;
+}
+
+.metricSubAction:hover {
+  text-decoration: underline;
+}
+
+.metricProgressTrack {
+  width: 100%;
+  height: 4px;
+  border-radius: 99px;
+  background: #e6eae7;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.metricProgressFill {
+  height: 100%;
+  border-radius: 99px;
+  background: #1b4fd8;
+  transition: width 0.3s ease;
+}
+
+.metricProgressFillFull {
+  background: #16a34a;
 }
 
 /* Sections & Panels */
+.contentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 28px;
+}
+
 .section {
-  margin-bottom: 24px;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .sectionHeader {
@@ -195,6 +322,9 @@
   background: rgba(255, 255, 255, .82);
   box-shadow: 0 13px 30px rgba(45, 53, 48, .06), inset 0 1px 0 rgba(255, 255, 255, .85);
   padding: 20px 22px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .descriptionBox {
@@ -215,7 +345,91 @@
   border-top: 1px solid rgba(30, 35, 32, 0.06);
 }
 
-/* Key-Value Metadata Grid */
+/* Dynamic Category Information Section */
+.categoryInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.categoryFieldCard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(246, 248, 246, 0.75);
+  border: 1px solid rgba(30, 35, 32, 0.05);
+  transition: all 0.15s ease;
+}
+
+.categoryFieldCard:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(30, 35, 32, 0.1);
+}
+
+.fieldLabel {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: #7d847f;
+  text-transform: uppercase;
+}
+
+.fieldValueRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fieldValue {
+  font-size: 12px;
+  font-weight: 550;
+  color: #171917;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.fieldValueMuted {
+  color: #9aa19c;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid rgba(30, 35, 32, 0.08);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #556059;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.copyBtn:hover {
+  background: #ffffff;
+  color: #171917;
+  border-color: rgba(30, 35, 32, 0.2);
+}
+
+.copiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #16a34a;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Key-Value Metadata Grid (Fallback / custom) */
 .metadataGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -531,6 +745,46 @@
   border: 1px solid var(--w-line);
 }
 
+/* Category Specific Details Modal Card */
+.modalCard {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 580px;
+  border: 1px solid rgba(30, 35, 32, 0.1);
+  overflow: hidden;
+  animation: modalAppear 0.18s ease-out;
+}
+
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--w-line);
+  background: #ffffff;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  color: #171917;
+  letter-spacing: -0.02em;
+}
+
 .modalHead {
   display: flex;
   justify-content: space-between;
@@ -552,6 +806,7 @@
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .closeBtn:hover {
@@ -576,7 +831,8 @@
   margin-bottom: 12px;
 }
 
-.formGroup label {
+.formGroup label,
+.formLabel {
   font-size: 11px;
   font-weight: 600;
   color: #38403a;
@@ -588,7 +844,9 @@
   gap: 10px;
 }
 
-.formInput {
+.formInput,
+.formSelect,
+.formTextarea {
   padding: 8px 12px;
   border-radius: 9px;
   border: 1px solid rgba(30, 35, 32, 0.15);
@@ -597,11 +855,26 @@
   color: #171917;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.formInput:focus {
+.formInput:focus,
+.formSelect:focus,
+.formTextarea:focus {
   border-color: #1b4fd8;
+  box-shadow: 0 0 0 2px rgba(27, 79, 216, 0.1);
+}
+
+.formTextarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+
+.modalBody {
+  background: #ffffff;
 }
 
 .modalActions {
@@ -773,6 +1046,12 @@
   margin: 0;
 }
 
+@media (max-width: 992px) {
+  .overviewGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
@@ -781,7 +1060,20 @@
   .headerActions {
     justify-content: flex-start;
   }
+  .contentGrid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .categoryInfoGrid {
+    grid-template-columns: 1fr;
+  }
   .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .overviewGrid {
     grid-template-columns: 1fr;
   }
 }

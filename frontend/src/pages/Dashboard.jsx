@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Coins,
   FileText,
   FolderOpen,
   Home,
@@ -16,6 +17,7 @@ import {
   Landmark,
   LayoutDashboard,
   ListChecks,
+  Percent,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -26,6 +28,7 @@ import {
   WalletCards,
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
+import BottomNav from '../components/BottomNav';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -46,6 +49,20 @@ const CATEGORY_ICONS = {
 function getCategoryIcon(catKey) {
   const normalized = String(catKey || '').toLowerCase().trim();
   return CATEGORY_ICONS[normalized] || WalletCards;
+}
+
+function getActivityIcon(catKey) {
+  const normalized = String(catKey || '').toLowerCase().trim();
+  if (normalized === 'nominees') return UsersRound;
+  if (normalized === 'documents') return FileText;
+  if (normalized === 'allocations') return Percent;
+  if (normalized === 'crypto') return Coins;
+  if (normalized === 'insurance') return ShieldCheck;
+  if (normalized === 'digital') return KeyRound;
+  if (normalized === 'property') return Home;
+  if (normalized === 'investments' || normalized === 'investment') return TrendingUp;
+  if (normalized === 'financial') return Landmark;
+  return WalletCards;
 }
 
 function formatCategoryName(catKey) {
@@ -506,6 +523,9 @@ const Dashboard = () => {
                           <strong>{item.message}</strong>
                           <span>{metaText}</span>
                         </div>
+                        <span className={styles.todoTooltip}>
+                          {item.message}
+                        </span>
                         <ChevronRight size={12} className={styles.todoArrow} />
                       </Link>
                     );
@@ -550,11 +570,16 @@ const Dashboard = () => {
                   {assets.byCategory.map(({ category, count }) => {
                     const Icon = getCategoryIcon(category);
                     return (
-                      <div className={styles.categoryRow} key={category}>
+                      <Link
+                        className={styles.categoryRow}
+                        key={category}
+                        to={`/vault?category=${encodeURIComponent(category)}`}
+                        title={`View ${formatCategoryName(category)} assets`}
+                      >
                         <span className={styles.categoryIcon}><Icon size={12} strokeWidth={1.7} /></span>
                         <span>{formatCategoryName(category)}</span>
                         <strong>{String(count).padStart(2, '0')}</strong>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -699,16 +724,27 @@ const Dashboard = () => {
               </div>
 
               <div className={styles.activityList}>
-                {activity.map(({ time, title, meta, icon: Icon }) => (
-                  <div className={styles.activityRow} key={`${time}-${title}`}>
-                    <span className={styles.activityIcon}><Icon size={12} strokeWidth={1.7} /></span>
-                    <div>
-                      <strong>{title}</strong>
-                      <span>{meta}</span>
-                    </div>
-                    <time>{time}</time>
+                {loadingDashboard ? (
+                  <div className={styles.emptyStateText}>Loading activity...</div>
+                ) : Array.isArray(dashboardData?.recentActivity) && dashboardData.recentActivity.length > 0 ? (
+                  dashboardData.recentActivity.slice(0, 4).map((item) => {
+                    const Icon = getActivityIcon(item.category);
+                    return (
+                      <div className={styles.activityRow} key={item.id || `${item.action}-${item.title}`}>
+                        <span className={styles.activityIcon}><Icon size={12} strokeWidth={1.7} /></span>
+                        <div>
+                          <strong>{item.title}</strong>
+                          <span>{item.categoryLabel || item.category || 'Workspace'}</span>
+                        </div>
+                        <time>{item.relativeTime || 'Recent'}</time>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className={styles.emptyStateText} style={{ padding: '8px 0' }}>
+                    No recent activity yet.
                   </div>
-                ))}
+                )}
               </div>
             </Link>
 
@@ -801,36 +837,7 @@ const Dashboard = () => {
         </div>
       </main>
 
-      {/* Existing floating navigation stays */}
-      <div className={styles.bottomFloatingNav}>
-        <div className={styles.navMenu}>
-          <Link className={styles.navLogo} to="/dashboard">DV.</Link>
-          {[
-            ['Home', '/dashboard'],
-            ['Vault', '/vault'],
-            ['Nominees', '/nominees'],
-            ['Activity', '/activity'],
-            ['Settings', '/settings'],
-          ].map(([item, path]) => (
-            <Link
-              key={item}
-              className={activeNav === item ? styles.navItemActive : styles.navItem}
-              to={path}
-            >
-              {item}
-            </Link>
-          ))}
-          <button
-            className={styles.signOutBtn}
-            onClick={async () => {
-              await logout();
-              navigate('/login', { replace: true });
-            }}
-          >
-            Sign out
-          </button>
-        </div>
-      </div>
+      <BottomNav />
     </div>
   );
 };

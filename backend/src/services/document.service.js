@@ -1,8 +1,9 @@
-﻿const crypto = require('crypto');
+const crypto = require('crypto');
 const path = require('path');
 const pool = require('../db');
 const storage = require('../storage');
 const { Errors } = require('../utils/errors');
+const { logActivity } = require('./activity.service');
 
 /**
  * Strips internal storage key before sending document to client.
@@ -97,7 +98,16 @@ const createDocument = async ({
       ]
     );
 
-    return result.rows[0];
+    const created = result.rows[0];
+    logActivity({
+      userId,
+      action: 'document_uploaded',
+      title: `${created.name} uploaded`,
+      category: 'documents',
+      metadata: { documentId: created.id, name: created.name, fileName: file.originalname.trim() },
+    }).catch(() => {});
+
+    return created;
   } catch (err) {
     // Clean up stored file if DB insertion fails
     await storage.delete(storageKey).catch(() => {});
@@ -133,7 +143,7 @@ const listDocuments = async (userId, { assetId = null } = {}) => {
   query += ` ORDER BY d.created_at DESC`;
 
   const result = await pool.query(query, params);
-  return result.rows;
+  return result.rows.map(formatDocument);
 };
 
 const getDocument = async (userId, documentId) => {
@@ -149,6 +159,7 @@ const getDocument = async (userId, documentId) => {
         d.file_name,
         d.mime_type,
         d.file_size,
+        d.storage_key,
         d.created_at,
         d.updated_at
       FROM documents d
@@ -198,7 +209,7 @@ const getDocumentForDownload = async (userId, documentId) => {
 };
 
 const updateDocument = async (userId, documentId, data) => {
-  // Ensure document exists and belongs to user
+  // Check existence & ownership first
   const existing = await getDocument(userId, documentId);
 
   const name = data.name !== undefined ? data.name.trim() : existing.name;
@@ -211,14 +222,14 @@ const updateDocument = async (userId, documentId, data) => {
     : existing.description;
 
   let assetId = existing.asset_id;
-  if (data.assetId !== undefined || data.asset_id !== undefined) {
-    const rawAssetId = data.assetId !== undefined ? data.assetId : data.asset_id;
-    if (rawAssetId === null || rawAssetId === '') {
+  if (data.assetId !== undefined) {
+    if (data.assetId === null || data.assetId === '') {
       assetId = null;
     } else {
+      // Verify asset belongs to user
       const assetCheck = await pool.query(
         `SELECT id FROM assets WHERE id = $1 AND user_id = $2`,
-        [rawAssetId, userId]
+        [data.assetId, userId]
       );
       if (assetCheck.rows.length === 0) {
         throw Errors.badRequest('Asset does not exist or access is denied.');
@@ -252,10 +263,21 @@ const updateDocument = async (userId, documentId, data) => {
     [name, description, assetId, documentId, userId]
   );
 
-  return result.rows[0];
+  const updated = result.rows[0];
+  logActivity({
+    userId,
+    action: 'document_updated',
+    title: `${updated.name} updated`,
+    category: 'documents',
+    metadata: { documentId: updated.id, name: updated.name },
+  }).catch(() => {});
+
+  return updated;
 };
 
 const deleteDocument = async (userId, documentId) => {
+  const existing = await getDocument(userId, documentId);
+
   const result = await pool.query(
     `
       DELETE FROM documents
@@ -276,6 +298,14 @@ const deleteDocument = async (userId, documentId) => {
   await storage.delete(deleted.storage_key).catch((err) => {
     console.error(`Failed to delete storage file for document ${documentId}:`, err.message);
   });
+
+  logActivity({
+    userId,
+    action: 'document_deleted',
+    title: `${existing.name} removed`,
+    category: 'documents',
+    metadata: { documentId, name: existing.name },
+  }).catch(() => {});
 
   return { id: deleted.id };
 };

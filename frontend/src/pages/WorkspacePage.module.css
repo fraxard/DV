@@ -853,97 +853,268 @@
   transform: translateX(2px);
 }
 
-.categorySection {
-  margin-bottom: 22px;
-  border-radius: 14px;
-  background: rgba(250, 251, 250, 0.7);
-  border: 1px solid rgba(30, 35, 32, 0.06);
-  padding: 14px 16px;
+.vaultCategoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 24px;
 }
 
-.categoryHeader {
+.bentoCategoryCard {
+  background: #ffffff;
+  border: 1px solid var(--w-line);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(45, 53, 48, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.bentoCategoryCard:hover {
+  border-color: rgba(35, 40, 37, 0.18);
+  box-shadow: 0 16px 32px rgba(45, 53, 48, 0.09);
+  transform: translateY(-2px);
+}
+
+.bentoHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(30, 35, 32, 0.05);
   gap: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px;
+  margin: -4px;
+  transition: background 0.15s ease;
 }
 
-.categoryHeaderMain {
+.bentoHeader:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.bentoHeaderLeft {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 
-.categoryHeaderIcon {
-  width: 32px;
-  height: 32px;
+.bentoIconBadge {
+  width: 34px;
+  height: 34px;
   border-radius: 9px;
-  background: #eef2ef;
+  background: #f0f3f0;
+  border: 1px solid rgba(30, 35, 32, 0.08);
   display: grid;
   place-items: center;
-  color: #4a554e;
+  color: #4b554e;
   flex-shrink: 0;
 }
 
-.categoryHeaderTitleRow {
+.bentoTitleGroup {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.categoryTitle {
+.bentoCategoryName {
   margin: 0;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: #171917;
-  letter-spacing: -0.02em;
 }
 
-.categoryBadge {
+.bentoCategoryDesc {
+  margin: 0;
+  font-size: 10px;
+  color: #7d847f;
+  line-height: 1.4;
+  max-width: 220px;
+}
+
+.bentoHeaderRight {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.bentoCountBadge {
   font-size: 9px;
-  font-weight: 600;
-  color: #657069;
-  background: #edf1ee;
+  font-weight: 650;
+  color: #555d57;
+  background: #f2f5f2;
+  border: 1px solid rgba(30, 35, 32, 0.06);
   padding: 2px 7px;
   border-radius: 99px;
 }
 
-.categoryDesc {
-  margin: 0;
-  font-size: 10px;
-  color: #7b837d;
-  line-height: 1.4;
-}
-
-.categoryTotal {
-  text-align: right;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.categoryTotalLabel {
-  font-size: 8px;
-  font-weight: 700;
-  color: #8a918c;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.categoryTotalValue {
+.bentoTotalValue {
   font-size: 12px;
   font-weight: 700;
   color: #171917;
+  letter-spacing: -0.01em;
 }
 
-.categoryRows {
+.bentoAssetList {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.bentoAssetRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #fafbfa;
+  border: 1px solid rgba(30, 35, 32, 0.06);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bentoAssetRow:hover {
+  background: #f2f6f3;
+  border-color: rgba(30, 35, 32, 0.12);
+  transform: translateX(2px);
+}
+
+.bentoAssetRow:focus-visible {
+  outline: 2px solid #1b4fd8;
+  outline-offset: 1px;
+}
+
+.bentoAssetInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bentoAssetName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #171917;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bentoAssetSub {
+  font-size: 9px;
+  color: #7d847f;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bentoAssetValue {
+  font-weight: 600;
+  color: #3b463e;
+}
+
+.bentoAssetControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.bentoIconBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #f0f3f0;
+  border: 1px solid rgba(30, 35, 32, 0.06);
+  display: grid;
+  place-items: center;
+  color: #657069;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bentoIconBtn:hover {
+  background: #e2e8e3;
+  color: #171917;
+}
+
+.bentoChevron {
+  color: #a4aca6;
+  display: grid;
+  place-items: center;
+  margin-left: 2px;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.bentoAssetRow:hover .bentoChevron {
+  color: #171917;
+  transform: translateX(1px);
+}
+
+.bentoViewMore {
+  font-size: 10px;
+  font-weight: 600;
+  color: #555d57;
+  background: #f4f6f4;
+  border: 1px solid rgba(30, 35, 32, 0.08);
+  border-radius: 8px;
+  padding: 6px 10px;
+  text-align: left;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.bentoViewMore:hover {
+  background: #eef2ef;
+  color: #171917;
+  border-color: rgba(30, 35, 32, 0.16);
+}
+
+.categoryModalList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  margin-top: 6px;
+  padding-right: 2px;
+}
+
+.categoryModalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fafbfa;
+  border: 1px solid rgba(30, 35, 32, 0.08);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.categoryModalRow:hover {
+  background: #f2f6f3;
+  border-color: rgba(30, 35, 32, 0.16);
+  transform: translateX(2px);
+}
+
+@media (max-width: 768px) {
+  .vaultCategoryGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .vaultControls {

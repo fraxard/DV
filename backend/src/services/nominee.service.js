@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { Errors } = require('../utils/errors');
+const { logActivity } = require('./activity.service');
 
 const normalizePhone = (phone) => {
   if (phone === undefined || phone === null) return null;
@@ -306,7 +307,16 @@ const createNominee = async (userId, data) => {
       ]
     );
 
-    return result.rows[0];
+    const created = result.rows[0];
+    logActivity({
+      userId,
+      action: 'nominee_created',
+      title: `${created.full_name} added as nominee`,
+      category: 'people',
+      metadata: { nomineeId: created.id, name: created.full_name, relationship: created.relationship },
+    }).catch(() => {});
+
+    return created;
   } catch (err) {
     if (err.code === '23505') {
       if (err.constraint === 'uq_nominees_user_phone') {
@@ -394,7 +404,16 @@ const updateNominee = async (userId, nomineeId, data) => {
       ]
     );
 
-    return result.rows[0];
+    const updated = result.rows[0];
+    logActivity({
+      userId,
+      action: 'nominee_updated',
+      title: `${updated.full_name} profile updated`,
+      category: 'people',
+      metadata: { nomineeId: updated.id, name: updated.full_name },
+    }).catch(() => {});
+
+    return updated;
   } catch (err) {
     if (err.code === '23505') {
       if (err.constraint === 'uq_nominees_user_phone') {
@@ -410,6 +429,8 @@ const updateNominee = async (userId, nomineeId, data) => {
 };
 
 const deleteNominee = async (userId, nomineeId) => {
+  const existing = await getNominee(userId, nomineeId);
+
   const result = await pool.query(
     `
       DELETE FROM nominees
@@ -422,6 +443,14 @@ const deleteNominee = async (userId, nomineeId) => {
   if (result.rows.length === 0) {
     throw Errors.notFound('Nominee not found.');
   }
+
+  logActivity({
+    userId,
+    action: 'nominee_deleted',
+    title: `${existing.full_name} removed as nominee`,
+    category: 'people',
+    metadata: { nomineeId, name: existing.full_name },
+  }).catch(() => {});
 
   return { id: result.rows[0].id };
 };

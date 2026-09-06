@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { Errors } = require('../utils/errors');
+const { logActivity } = require('./activity.service');
 
 const listAssetNominees = async (userId, assetId) => {
   // Verify asset ownership
@@ -167,6 +168,15 @@ const assignNomineeToAsset = async (userId, assetId, data) => {
 
     const assignment = upsertRes.rows[0];
     assignment.nominee = nomineeCheck.rows[0];
+
+    logActivity({
+      userId,
+      action: 'allocation_assigned',
+      title: `${nomineeCheck.rows[0].full_name} assigned (${assignment.allocation_percentage}%) to ${assetCheck.rows[0].name}`,
+      category: 'allocations',
+      metadata: { assetId, nomineeId: resolvedNomineeId, percentage: assignment.allocation_percentage },
+    }).catch(() => {});
+
     return assignment;
   } catch (err) {
     await client.query('ROLLBACK');
@@ -199,41 +209,30 @@ const updateAssetNomineeAllocation = async (userId, assetId, nomineeId, data) =>
     throw Errors.badRequest('Allocation percentage must be greater than 0 and at most 100.');
   }
 
-  // BEGIN PostgreSQL Transaction with row-level lock on assets table
   const client = await pool.connect();
+
   try {
     await client.query('BEGIN');
 
-    // 1. Verify and lock the relevant asset row using FOR UPDATE
+    // 1. Verify asset ownership with row lock
     const assetCheck = await client.query(
-      `
-        SELECT id, name
-        FROM assets
-        WHERE id = $1 AND user_id = $2
-        FOR UPDATE
-      `,
+      `SELECT id, name, user_id FROM assets WHERE id = $1 AND user_id = $2 FOR UPDATE`,
       [assetId, userId]
     );
-
     if (assetCheck.rows.length === 0) {
       throw Errors.notFound('Asset not found or access denied.');
     }
 
     // 2. Verify nominee ownership
     const nomineeCheck = await client.query(
-      `
-        SELECT id, full_name, email, relationship
-        FROM nominees
-        WHERE id = $1 AND user_id = $2
-      `,
+      `SELECT id, full_name, email FROM nominees WHERE id = $1 AND user_id = $2`,
       [nomineeId, userId]
     );
-
     if (nomineeCheck.rows.length === 0) {
       throw Errors.notFound('Nominee not found or access denied.');
     }
 
-    // 3. Verify assignment exists
+    // 3. Verify existing assignment
     const existingCheck = await client.query(
       `
         SELECT id, can_view, can_download_docs
@@ -296,6 +295,15 @@ const updateAssetNomineeAllocation = async (userId, assetId, nomineeId, data) =>
 
     const assignment = updateRes.rows[0];
     assignment.nominee = nomineeCheck.rows[0];
+
+    logActivity({
+      userId,
+      action: 'allocation_updated',
+      title: `${nomineeCheck.rows[0].full_name} allocation updated to ${assignment.allocation_percentage}%`,
+      category: 'allocations',
+      metadata: { assetId, nomineeId, percentage: assignment.allocation_percentage },
+    }).catch(() => {});
+
     return assignment;
   } catch (err) {
     await client.query('ROLLBACK');
@@ -308,12 +316,17 @@ const updateAssetNomineeAllocation = async (userId, assetId, nomineeId, data) =>
 const removeNomineeFromAsset = async (userId, assetId, nomineeId) => {
   // Verify asset ownership
   const assetCheck = await pool.query(
-    `SELECT id FROM assets WHERE id = $1 AND user_id = $2`,
+    `SELECT id, name FROM assets WHERE id = $1 AND user_id = $2`,
     [assetId, userId]
   );
   if (assetCheck.rows.length === 0) {
     throw Errors.notFound('Asset not found or access denied.');
   }
+
+  const nomineeCheck = await pool.query(
+    `SELECT id, full_name FROM nominees WHERE id = $1 AND user_id = $2`,
+    [nomineeId, userId]
+  );
 
   const result = await pool.query(
     `
@@ -327,6 +340,16 @@ const removeNomineeFromAsset = async (userId, assetId, nomineeId) => {
   if (result.rows.length === 0) {
     throw Errors.notFound('Assignment not found.');
   }
+
+  const nomineeName = nomineeCheck.rows[0]?.full_name || 'Nominee';
+  const assetName = assetCheck.rows[0]?.name || 'asset';
+  logActivity({
+    userId,
+    action: 'allocation_removed',
+    title: `${nomineeName} unassigned from ${assetName}`,
+    category: 'allocations',
+    metadata: { assetId, nomineeId },
+  }).catch(() => {});
 
   return { id: result.rows[0].id, asset_id: assetId, nominee_id: nomineeId };
 };
