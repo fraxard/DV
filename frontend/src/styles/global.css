@@ -142,3 +142,21 @@ body {
 [data-reveal-delay="3"] { transition-delay: 0.24s; }
 [data-reveal-delay="4"] { transition-delay: 0.32s; }
 [data-reveal-delay="5"] { transition-delay: 0.40s; }
+
+/* ============================================================
+   DIGIVIRASAT — Dark Theme Global Base Rules
+   ============================================================ */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  color-scheme: dark;
+}

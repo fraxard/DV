@@ -311,6 +311,41 @@ const Dashboard = () => {
   const isMultiCurrency = assets.totalValue === null && Array.isArray(assets.totalValueByCurrency) && assets.totalValueByCurrency.length > 1;
   const singleCurrency = assets.totalValueByCurrency?.[0]?.currency || 'INR';
 
+  const upcomingTasks = useMemo(() => {
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return (tasks || [])
+      .filter((t) => {
+        const d = t.due_date || t.dueDate;
+        return d && d >= todayStr && t.status === 'scheduled';
+      })
+      .sort((a, b) => {
+        const da = a.due_date || a.dueDate || '';
+        const db = b.due_date || b.dueDate || '';
+        return da.localeCompare(db);
+      })
+      .slice(0, 3);
+  }, [tasks, now]);
+
+  const heroCtaText = useMemo(() => {
+    if (loadingDashboard) return 'Loading...';
+    if (attentionCount > 0) {
+      return `Complete ${attentionCount} action${attentionCount > 1 ? 's' : ''} →`;
+    }
+    return 'Explore Vault →';
+  }, [loadingDashboard, attentionCount]);
+
+  const heroCtaTarget = useMemo(() => {
+    if (attentionCount > 0 && needsAttention.length > 0) {
+      const firstAction = needsAttention[0]?.action;
+      if (firstAction === 'nominees') return '/nominees?new=1';
+      if (firstAction === 'allocations') return '/nominees';
+      if (firstAction === 'documents') return '/documents?upload=1';
+      if (firstAction === 'verify_email') return '/verify-email';
+      return '/activity';
+    }
+    return '/vault';
+  }, [attentionCount, needsAttention]);
+
   return (
     <div className={styles.dashboardContainer}>
       <div className={styles.ambientGlow} />
@@ -396,19 +431,19 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className={styles.mainGrid}>
-            {/* Hero */}
+            {/* 1. Hero — Primary Anchor (Legacy Readiness) */}
             <section className={`${styles.card} ${styles.heroCard}`}>
               <div className={styles.heroPattern} />
               <div className={styles.cardTop}>
                 <div>
-                  <span className={styles.cardKicker}>YOUR LEGACY</span>
+                  <span className={styles.cardKicker}>LEGACY COMMAND</span>
                   <h2>Good evening.</h2>
                 </div>
                 <div className={styles.heroSpark}><Sparkles size={14} /></div>
               </div>
 
               <div className={styles.heroMiddle}>
-                <p>Your digital legacy is taking shape.</p>
+                <p>Your digital legacy workspace is active and monitoring all records.</p>
                 <div className={styles.heroScoreRow}>
                   {loadingDashboard ? (
                     <strong style={{ opacity: 0.5 }}>--<span>%</span></strong>
@@ -416,14 +451,8 @@ const Dashboard = () => {
                     <strong>{readinessScore}<span>%</span></strong>
                   )}
                   <div>
-                    <span>{loadingDashboard ? 'LOADING...' : readinessLabel}</span>
-                    <small>
-                      {loadingDashboard
-                        ? 'Calculating metrics...'
-                        : attentionCount === 0
-                          ? 'Everything is up to date'
-                          : `${attentionCount} thing${attentionCount > 1 ? 's' : ''} need${attentionCount === 1 ? 's' : ''} your attention`}
-                    </small>
+                    <span>LEGACY READINESS</span>
+                    <small>Based on your assets, nominees, documents and allocations</small>
                   </div>
                 </div>
                 <div className={styles.progressTrack}>
@@ -450,55 +479,87 @@ const Dashboard = () => {
                   <strong>{loadingDashboard && loadingNominees ? '--' : String(totalNomineeCount).padStart(2, '0')}</strong>
                   <span>nominees</span>
                 </div>
-                <Link className={styles.darkAction} to="/vault">Continue <ChevronRight size={12} /></Link>
+                <Link className={styles.darkAction} to={heroCtaTarget}>
+                  {heroCtaText} <ChevronRight size={12} />
+                </Link>
               </div>
             </section>
 
-            {/* Nominees */}
-            <section className={`${styles.card} ${styles.nomineeCardPanel}`}>
+            {/* 2. Today / Action Required — Immediate Action Anchor */}
+            <section className={`${styles.card} ${styles.todayCard}`}>
               <div className={styles.cardTop}>
                 <div>
-                  <span className={styles.cardKicker}>PEOPLE</span>
-                  <h3>Nominees</h3>
+                  <span className={styles.cardKicker}>ACTION REQUIRED</span>
+                  <h3>Today</h3>
                 </div>
                 <span className={styles.countPill}>
-                  {loadingDashboard && loadingNominees ? '--' : String(totalNomineeCount).padStart(2, '0')}
+                  {loadingDashboard ? '--' : String(attentionCount).padStart(2, '0')}
                 </span>
               </div>
 
-              <div className={styles.nomineeList}>
-                {loadingNominees ? (
-                  <div className={styles.emptyStateText}>
-                    Loading nominees...
-                  </div>
-                ) : nomineeSummary.nominees.length === 0 ? (
-                  <div className={styles.emptyStateText}>
-                    No nominees yet. Add your trusted beneficiaries.
-                    <br />
-                    <Link className={styles.emptyStateLink} to="/nominees?new=1">Add first nominee</Link>
-                  </div>
-                ) : (
-                  nomineeSummary.nominees.map((n, idx) => (
-                    <div className={styles.personRow} key={n.id}>
-                      <div className={`${styles.avatar} ${idx % 2 === 1 ? styles.avatarAlt : ''}`}>
-                        {(n.full_name || 'N').charAt(0).toUpperCase()}
-                      </div>
-                      <div className={styles.personInfo}>
-                        <strong>{n.full_name}</strong>
-                        <span>{n.relationship}</span>
-                      </div>
-                      <span className={styles.share}>
-                        {parseFloat(Number(n.overall_share || 0).toFixed(2))}%
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
+              {loadingDashboard ? (
+                <div className={styles.emptyStateText}>Loading action items...</div>
+              ) : attentionCount === 0 ? (
+                <div className={styles.emptyAttentionCard}>
+                  <Check size={14} color="var(--dv-green, #6c8d76)" />
+                  <span>No outstanding actions needed. Your legacy records are completely up to date!</span>
+                </div>
+              ) : (
+                <div className={styles.todoList}>
+                  {needsAttention.slice(0, 3).map((item) => {
+                    const target = item.action === 'nominees'
+                      ? '/nominees?new=1'
+                      : item.action === 'allocations'
+                        ? '/nominees'
+                        : item.action === 'documents'
+                          ? '/documents?upload=1'
+                          : item.action === 'verify_email'
+                            ? '/verify-email'
+                            : '/vault?new=asset';
 
-              <Link className={styles.textAction} to="/nominees?new=1"><Plus size={12} /> Add nominee</Link>
+                    const metaText = item.action === 'nominees'
+                      ? 'Nominees'
+                      : item.action === 'allocations'
+                        ? 'Allocations'
+                        : item.action === 'documents'
+                          ? 'Documents'
+                          : item.action === 'verify_email'
+                            ? 'Account'
+                            : 'Vault';
+
+                    return (
+                      <Link className={styles.todoRow} to={target} key={item.key} title={item.message}>
+                        <span className={styles.todoCheck}>
+                          {item.severity === 'high' ? (
+                            <AlertTriangle size={12} color="#d97706" />
+                          ) : (
+                            <Clock3 size={12} color="var(--dv-muted, #7b817d)" />
+                          )}
+                        </span>
+                        <div>
+                          <strong>{item.message}</strong>
+                          <span>{metaText}</span>
+                        </div>
+                        <ChevronRight size={13} className={styles.todoArrow} />
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className={styles.cardFooterNote}>
+                <span>
+                  {loadingDashboard
+                    ? 'Loading items...'
+                    : attentionCount === 0
+                      ? '0 actions remaining'
+                      : `${attentionCount} action${attentionCount > 1 ? 's' : ''} remaining`}
+                </span>
+                <ListChecks size={12} />
+              </div>
             </section>
 
-            {/* Calendar */}
+            {/* 3. Calendar — Plan Ahead with Upcoming Deadlines */}
             <section className={`${styles.card} ${styles.calendarCard}`}>
               <div className={styles.cardTop}>
                 <div>
@@ -563,102 +624,71 @@ const Dashboard = () => {
                       ? '#f59e0b'
                       : selectedEvents.some((t) => t.status === 'completed')
                         ? '#15803d'
-                        : selectedEvents.length ? '#1b4fd8' : '#76917c',
+                        : selectedEvents.length ? '#1b4fd8' : 'var(--dv-green, #76917c)',
                   }}
                 />
                 <div>
-                  <span>{selectedEvents[0]?.title || 'No scheduled review'}</span>
+                  <span>{selectedEvents[0]?.title || `Day ${selectedDay} · ${selectedEvents.length ? `${selectedEvents.length} scheduled task(s)` : 'No task'}`}</span>
                   <small>
                     {selectedEvents.length
                       ? `${selectedEvents.length} scheduled task${selectedEvents.length > 1 ? 's' : ''} (click to view)`
-                      : 'Your calendar is clear — click to add task'}
+                      : 'Click to schedule a review for this day'}
                   </small>
                 </div>
               </div>
-            </section>
 
-            {/* Today / Needs Attention */}
-            <section className={`${styles.card} ${styles.todayCard}`}>
-              <div className={styles.cardTop}>
-                <div>
-                  <span className={styles.cardKicker}>ATTENTION</span>
-                  <h3>Today</h3>
+              {/* Upcoming Deadlines Section */}
+              <div className={styles.calendarUpcomingSection}>
+                <div className={styles.calendarUpcomingHeader}>
+                  <span>UPCOMING DEADLINES</span>
+                  <Link to="/calendar" className={styles.calendarLink}>View all →</Link>
                 </div>
-                <span className={styles.countPill}>
-                  {loadingDashboard ? '--' : String(attentionCount).padStart(2, '0')}
-                </span>
-              </div>
-
-              {loadingDashboard ? (
-                <div className={styles.emptyStateText}>Loading action items...</div>
-              ) : attentionCount === 0 ? (
-                <div className={styles.emptyAttentionCard}>
-                  <Check size={14} color="#6c8d76" />
-                  <span>No outstanding actions needed. Your legacy records are completely up to date!</span>
-                </div>
-              ) : (
-                <div className={styles.todoList}>
-                  {needsAttention.slice(0, 3).map((item) => {
-                    const target = item.action === 'nominees'
-                      ? '/nominees?new=1'
-                      : item.action === 'allocations'
-                        ? '/nominees'
-                        : item.action === 'documents'
-                          ? '/documents?upload=1'
-                          : item.action === 'verify_email'
-                            ? '/verify-email'
-                            : '/vault?new=asset';
-
-                    const metaText = item.action === 'nominees'
-                      ? 'Nominees'
-                      : item.action === 'allocations'
-                        ? 'Allocations'
-                        : item.action === 'documents'
-                          ? 'Documents'
-                          : item.action === 'verify_email'
-                            ? 'Account'
-                            : 'Vault';
-
-                    return (
-                      <Link className={styles.todoRow} to={target} key={item.key}>
-                        <span className={styles.todoCheck}>
-                          {item.severity === 'high' ? (
-                            <AlertTriangle size={11} color="#d97706" />
-                          ) : (
-                            <Clock3 size={11} color="#7b817d" />
-                          )}
-                        </span>
-                        <div>
-                          <strong>{item.message}</strong>
-                          <span>{metaText}</span>
+                {upcomingTasks.length > 0 ? (
+                  <div className={styles.upcomingTaskList}>
+                    {upcomingTasks.map((t) => {
+                      const d = t.due_date || t.dueDate;
+                      const dayNum = d ? parseInt(d.split('-')[2], 10) : null;
+                      return (
+                        <div
+                          key={t.id}
+                          className={styles.upcomingTaskRow}
+                          onClick={() => dayNum && handleOpenDayModal(dayNum)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && dayNum) handleOpenDayModal(dayNum); }}
+                        >
+                          <div className={styles.upcomingTaskDate}>
+                            {d ? `${monthNames[month].slice(0, 3)} ${dayNum}` : 'Scheduled'}
+                          </div>
+                          <div className={styles.upcomingTaskInfo}>
+                            <strong>{t.title}</strong>
+                            <span>{t.priority || 'Normal'} priority</span>
+                          </div>
+                          <ChevronRight size={11} className={styles.mutedIcon} />
                         </div>
-                        <span className={styles.todoTooltip}>
-                          {item.message}
-                        </span>
-                        <ChevronRight size={12} className={styles.todoArrow} />
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className={styles.cardFooterNote}>
-                <span>
-                  {loadingDashboard
-                    ? 'Loading items...'
-                    : attentionCount === 0
-                      ? '0 actions remaining'
-                      : `${attentionCount} action${attentionCount > 1 ? 's' : ''} remaining`}
-                </span>
-                <ListChecks size={12} />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={styles.upcomingEmptyState}>
+                    <span>No upcoming deadlines this week. All records are up to date.</span>
+                    <button
+                      type="button"
+                      className={styles.calendarAddAction}
+                      onClick={() => handleOpenDayModal(now.getDate())}
+                    >
+                      + Schedule review
+                    </button>
+                  </div>
+                )}
               </div>
             </section>
 
-            {/* Vault Categories */}
+            {/* 4. Vault — Recorded Assets */}
             <section className={`${styles.card} ${styles.vaultCard}`}>
               <div className={styles.cardTop}>
                 <div>
-                  <span className={styles.cardKicker}>ORGANISE</span>
+                  <span className={styles.cardKicker}>VAULT ASSETS</span>
                   <h3>Your vault</h3>
                 </div>
                 <span className={styles.countPill}>
@@ -697,69 +727,55 @@ const Dashboard = () => {
               <Link className={styles.textAction} to="/vault">View all assets <ChevronRight size={12} /></Link>
             </section>
 
-            {/* Vault Health */}
-            <section className={`${styles.card} ${styles.healthCard}`}>
+            {/* 5. Nominees — Beneficiaries */}
+            <section className={`${styles.card} ${styles.nomineeCardPanel}`}>
               <div className={styles.cardTop}>
                 <div>
-                  <span className={styles.cardKicker}>STATUS</span>
-                  <h3>Vault health</h3>
+                  <span className={styles.cardKicker}>BENEFICIARIES</span>
+                  <h3>Nominees</h3>
                 </div>
-                <ShieldCheck size={15} className={styles.mutedIcon} />
+                <span className={styles.countPill}>
+                  {loadingDashboard && loadingNominees ? '--' : String(totalNomineeCount).padStart(2, '0')}
+                </span>
               </div>
 
-              <div
-                className={styles.healthRing}
-                style={{
-                  background: loadingDashboard
-                    ? 'conic-gradient(#e7ebe8 100%, #e7ebe8 0)'
-                    : `conic-gradient(#738d79 ${readinessScore}%, #e7ebe8 0)`,
-                }}
-              >
-                <div>
-                  <strong>{loadingDashboard ? '--' : readinessScore}</strong>
-                  <span>%</span>
-                </div>
+              <div className={styles.nomineeList}>
+                {loadingNominees ? (
+                  <div className={styles.emptyStateText}>
+                    Loading nominees...
+                  </div>
+                ) : nomineeSummary.nominees.length === 0 ? (
+                  <div className={styles.emptyStateText}>
+                    No nominees yet. Add your trusted beneficiaries.
+                    <br />
+                    <Link className={styles.emptyStateLink} to="/nominees?new=1">Add first nominee</Link>
+                  </div>
+                ) : (
+                  nomineeSummary.nominees.map((n, idx) => (
+                    <div className={styles.personRow} key={n.id}>
+                      <div className={`${styles.avatar} ${idx % 2 === 1 ? styles.avatarAlt : ''}`}>
+                        {(n.full_name || 'N').charAt(0).toUpperCase()}
+                      </div>
+                      <div className={styles.personInfo}>
+                        <strong>{n.full_name}</strong>
+                        <span>{n.relationship}</span>
+                      </div>
+                      <span className={styles.share}>
+                        {parseFloat(Number(n.overall_share || 0).toFixed(2))}%
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
-              <span className={styles.healthLabel}>
-                {loadingDashboard ? 'Calculating...' : readiness.label || 'Getting Started'}
-              </span>
 
-              <div className={styles.miniChecks}>
-                <span className={readiness.components?.verification ? '' : styles.pending}>
-                  <i /> Account secured
-                </span>
-                <span className={nominees.total > 0 ? '' : styles.pending}>
-                  <i /> Nominees added ({loadingDashboard ? '--' : nominees.total})
-                </span>
-                <span className={nominees.assigned > 0 ? '' : styles.pending}>
-                  <i /> Allocations set ({loadingDashboard ? '--' : nominees.assigned})
-                </span>
-              </div>
+              <Link className={styles.textAction} to="/nominees?new=1"><Plus size={12} /> Add nominee</Link>
             </section>
 
-            {/* Quick actions */}
-            <section className={`${styles.card} ${styles.quickCard}`}>
-              <div className={styles.cardTop}>
-                <div>
-                  <span className={styles.cardKicker}>SHORTCUTS</span>
-                  <h3>Quick actions</h3>
-                </div>
-                <Plus size={15} className={styles.mutedIcon} />
-              </div>
-
-              <div className={styles.quickGrid}>
-                <Link to="/vault?new=asset"><span><WalletCards size={13} /></span>Add asset</Link>
-                <Link to="/nominees?new=1"><span><UsersRound size={13} /></span>Add nominee</Link>
-                <Link to="/documents?upload=1"><span><Upload size={13} /></span>Upload doc</Link>
-                <Link to="/calendar?new=1"><span><CalendarDays size={13} /></span>Add date</Link>
-              </div>
-            </section>
-
-            {/* Financial overview */}
+            {/* 6. Financial Overview */}
             <Link className={`${styles.card} ${styles.financeCard}`} to="/vault?category=financial">
               <div className={styles.cardTop}>
                 <div>
-                  <span className={styles.cardKicker}>OVERVIEW</span>
+                  <span className={styles.cardKicker}>PORTFOLIO VALUE</span>
                   <h3>Financial snapshot</h3>
                 </div>
                 <Landmark size={15} className={styles.mutedIcon} />
@@ -833,12 +849,103 @@ const Dashboard = () => {
                     );
                   })
                 ) : (
-                  <span style={{ width: '100%', background: '#cbd4cd' }} />
+                  <span style={{ width: '100%', background: 'var(--dv-line)' }} />
                 )}
               </div>
             </Link>
 
-            {/* Activity */}
+            {/* 7. Vault Integrity (Security & Verification) */}
+            <section className={`${styles.card} ${styles.healthCard}`}>
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>SECURITY & VERIFICATION</span>
+                  <h3>Vault integrity</h3>
+                </div>
+                <ShieldCheck size={15} className={styles.mutedIcon} />
+              </div>
+
+              <div
+                className={styles.healthRing}
+                style={{
+                  background: loadingDashboard
+                    ? 'conic-gradient(var(--dv-line) 100%, var(--dv-line) 0)'
+                    : `conic-gradient(var(--dv-green, #738d79) ${readinessScore}%, var(--dv-soft) 0)`,
+                }}
+              >
+                <div>
+                  <strong>{loadingDashboard ? '--' : readinessScore}</strong>
+                  <span>%</span>
+                </div>
+              </div>
+              <span className={styles.healthLabel}>
+                {loadingDashboard ? 'Calculating...' : `${readiness.label || 'Protected'} · Verification status`}
+              </span>
+
+              <div className={styles.miniChecks}>
+                <span className={readiness.components?.verification ? '' : styles.pending}>
+                  <i /> Account secured
+                </span>
+                <span className={nominees.total > 0 ? '' : styles.pending}>
+                  <i /> Nominees added ({loadingDashboard ? '--' : nominees.total})
+                </span>
+                <span className={allocation.coveragePercentage > 0 ? '' : styles.pending}>
+                  <i /> Allocation set ({loadingDashboard ? '--' : `${Math.round(allocation.coveragePercentage)}%`})
+                </span>
+              </div>
+            </section>
+
+            {/* 8. Documents */}
+            <Link to="/documents" className={`${styles.card} ${styles.smallInfoCard} ${styles.documentsCard}`}>
+              <div className={styles.cardTop}>
+                <div><span className={styles.cardKicker}>ARCHIVE</span><h3>Documents</h3></div>
+                <FileText size={14} className={styles.mutedIcon} />
+              </div>
+              <strong className={styles.bigSmallNumber}>
+                {loadingDashboard ? '--' : documents.total}
+              </strong>
+              <div className={styles.microRows}>
+                <span>Covered assets <b>{loadingDashboard ? '--' : String(documents.assetsWithDocuments).padStart(2, '0')}</b></span>
+                <span>Missing docs <b>{loadingDashboard ? '--' : String(documents.assetsWithoutDocuments).padStart(2, '0')}</b></span>
+                <span>Asset coverage <b>{loadingDashboard ? '--' : `${Math.round(documents.coveragePercentage)}%`}</b></span>
+              </div>
+            </Link>
+
+            {/* 9. Allocation Coverage */}
+            <Link to="/nominees" className={`${styles.card} ${styles.smallInfoCard} ${styles.protectionCard}`}>
+              <div className={styles.cardTop}>
+                <div><span className={styles.cardKicker}>ALLOCATIONS</span><h3>Allocation coverage</h3></div>
+                <ShieldCheck size={14} className={styles.mutedIcon} />
+              </div>
+              <strong className={styles.bigSmallNumber}>
+                {loadingDashboard ? '--' : `${Math.round(allocation.coveragePercentage)}`}{!loadingDashboard && <span>%</span>}
+              </strong>
+              <div className={styles.thinProgress}>
+                <span style={{ width: `${loadingDashboard ? 0 : Math.round(allocation.coveragePercentage)}%` }} />
+              </div>
+              <span className={styles.smallMuted}>
+                {loadingDashboard
+                  ? 'Loading...'
+                  : `${nominees.assigned} assigned · ${nominees.unassigned} unassigned`}
+              </span>
+            </Link>
+
+            {/* 10. Coverage breakdown */}
+            <Link to="/vault" className={`${styles.card} ${styles.smallInfoCard} ${styles.digitalCard}`}>
+              <div className={styles.cardTop}>
+                <div><span className={styles.cardKicker}>VAULT SUMMARY</span><h3>Coverage breakdown</h3></div>
+                <KeyRound size={14} className={styles.mutedIcon} />
+              </div>
+              <strong className={styles.bigSmallNumber}>
+                {loadingDashboard ? '--' : assets.total}
+              </strong>
+              <div className={styles.microRows}>
+                <span>Unallocated assets <b>{loadingDashboard ? '--' : String(nominees.assetsWithoutAllocation).padStart(2, '0')}</b></span>
+                <span>Documented <b>{loadingDashboard ? '--' : String(documents.assetsWithDocuments).padStart(2, '0')}</b></span>
+                <span>Categories <b>{loadingDashboard ? '--' : String(categoriesCount).padStart(2, '0')}</b></span>
+              </div>
+            </Link>
+
+            {/* 11. Timeline — Recent activity */}
             <Link className={`${styles.card} ${styles.activityCard}`} to="/activity">
               <div className={styles.cardTop}>
                 <div>
@@ -857,11 +964,11 @@ const Dashboard = () => {
                     return (
                       <div className={styles.activityRow} key={item.id || `${item.action}-${item.title}`}>
                         <span className={styles.activityIcon}><Icon size={12} strokeWidth={1.7} /></span>
-                        <div>
-                          <strong>{item.title}</strong>
-                          <span>{item.categoryLabel || item.category || 'Workspace'}</span>
+                        <div className={styles.activityMain}>
+                          <strong className={styles.activityTitle}>{item.title}</strong>
+                          <span className={styles.activityCategory}>{item.categoryLabel || item.category || 'Workspace'}</span>
                         </div>
-                        <time>{item.relativeTime || 'Recent'}</time>
+                        <time className={styles.activityTime}>{item.relativeTime || 'Recent'}</time>
                       </div>
                     );
                   })
@@ -873,56 +980,25 @@ const Dashboard = () => {
               </div>
             </Link>
 
-            {/* Smaller category cards */}
-            <Link to="/documents" className={`${styles.card} ${styles.smallInfoCard} ${styles.documentsCard}`}>
+            {/* 12. Shortcuts — Quick actions */}
+            <section className={`${styles.card} ${styles.quickCard}`}>
               <div className={styles.cardTop}>
-                <div><span className={styles.cardKicker}>ARCHIVE</span><h3>Documents</h3></div>
-                <FileText size={14} className={styles.mutedIcon} />
+                <div>
+                  <span className={styles.cardKicker}>SHORTCUTS</span>
+                  <h3>Quick actions</h3>
+                </div>
+                <Plus size={15} className={styles.mutedIcon} />
               </div>
-              <strong className={styles.bigSmallNumber}>
-                {loadingDashboard ? '--' : documents.total}
-              </strong>
-              <div className={styles.microRows}>
-                <span>Covered assets <b>{loadingDashboard ? '--' : String(documents.assetsWithDocuments).padStart(2, '0')}</b></span>
-                <span>Missing docs <b>{loadingDashboard ? '--' : String(documents.assetsWithoutDocuments).padStart(2, '0')}</b></span>
-                <span>Asset coverage <b>{loadingDashboard ? '--' : `${Math.round(documents.coveragePercentage)}%`}</b></span>
-              </div>
-            </Link>
 
-            <Link to="/nominees" className={`${styles.card} ${styles.smallInfoCard} ${styles.protectionCard}`}>
-              <div className={styles.cardTop}>
-                <div><span className={styles.cardKicker}>PROTECTION</span><h3>Allocations</h3></div>
-                <ShieldCheck size={14} className={styles.mutedIcon} />
+              <div className={styles.quickGrid}>
+                <Link to="/vault?new=asset"><span><WalletCards size={13} /></span>Add asset</Link>
+                <Link to="/nominees?new=1"><span><UsersRound size={13} /></span>Add nominee</Link>
+                <Link to="/documents?upload=1"><span><Upload size={13} /></span>Upload doc</Link>
+                <Link to="/calendar?new=1"><span><CalendarDays size={13} /></span>Add date</Link>
               </div>
-              <strong className={styles.bigSmallNumber}>
-                {loadingDashboard ? '--' : `${Math.round(allocation.coveragePercentage)}`}{!loadingDashboard && <span>%</span>}
-              </strong>
-              <div className={styles.thinProgress}>
-                <span style={{ width: `${loadingDashboard ? 0 : Math.round(allocation.coveragePercentage)}%` }} />
-              </div>
-              <span className={styles.smallMuted}>
-                {loadingDashboard
-                  ? 'Loading...'
-                  : `${nominees.assigned} assigned · ${nominees.unassigned} unassigned`}
-              </span>
-            </Link>
+            </section>
 
-            <Link to="/vault" className={`${styles.card} ${styles.smallInfoCard} ${styles.digitalCard}`}>
-              <div className={styles.cardTop}>
-                <div><span className={styles.cardKicker}>VAULT SUMMARY</span><h3>Coverage breakdown</h3></div>
-                <KeyRound size={14} className={styles.mutedIcon} />
-              </div>
-              <strong className={styles.bigSmallNumber}>
-                {loadingDashboard ? '--' : assets.total}
-              </strong>
-              <div className={styles.microRows}>
-                <span>Unallocated assets <b>{loadingDashboard ? '--' : String(nominees.assetsWithoutAllocation).padStart(2, '0')}</b></span>
-                <span>Documented <b>{loadingDashboard ? '--' : String(documents.assetsWithDocuments).padStart(2, '0')}</b></span>
-                <span>Categories <b>{loadingDashboard ? '--' : String(categoriesCount).padStart(2, '0')}</b></span>
-              </div>
-            </Link>
-
-            {/* Legacy readiness */}
+            {/* 13. Legacy Readiness Checklist — Next Step */}
             <section className={`${styles.card} ${styles.readinessCard}`}>
               <div>
                 <span className={styles.cardKicker}>NEXT STEP</span>

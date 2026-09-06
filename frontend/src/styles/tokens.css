@@ -52,6 +52,35 @@
   --color-primary-08:      rgba(27, 79, 216, 0.08);
   --color-primary-16:      rgba(27, 79, 216, 0.16);
 
+  /* Shell, panel & UI tokens */
+  --color-shell-bg:        radial-gradient(circle at 82% 5%, rgba(255, 255, 255, .95), transparent 28%),
+                           radial-gradient(circle at 10% 30%, rgba(214, 225, 218, .65), transparent 34%),
+                           linear-gradient(135deg, #edf1ef, #e5ebe7 55%, #f4f4f0);
+  --color-panel-bg:        rgba(255, 255, 255, .82);
+  --color-panel-shadow:    0 13px 30px rgba(45, 53, 48, .06), inset 0 1px 0 rgba(255, 255, 255, .85);
+  --color-row-hover:       rgba(255, 255, 255, .45);
+  --color-stat-bg:         rgba(255, 255, 255, .72);
+  --color-header-icon-bg:  rgba(255, 255, 255, .7);
+  --color-modal-overlay:   rgba(18, 22, 19, 0.48);
+  --color-input-bg:        #ffffff;
+  --color-input-border:    #d4ded7;
+
+  /* Workspace & Dashboard bridge tokens */
+  --w-bg:                  #edf1ee;
+  --w-ink:                 #171917;
+  --w-muted:               #7d847f;
+  --w-line:                rgba(30, 35, 32, .08);
+
+  --dv-bg:                 #eef1f0;
+  --dv-surface:            rgba(255, 255, 255, 0.88);
+  --dv-surface-solid:      #ffffff;
+  --dv-ink:                #171817;
+  --dv-muted:              #7b817d;
+  --dv-line:               rgba(28, 32, 29, 0.085);
+  --dv-soft:               #f3f5f3;
+  --dv-dark:               #181a19;
+  --dv-green:              #6c8d76;
+
   /* ── Typography ────────────────────────────────────────── */
   --font-sans:   'Inter', system-ui, -apple-system, sans-serif;
 
@@ -118,4 +147,93 @@
 
   /* ── Breakpoints (reference only for JS) ───────────────── */
   /* --bp-sm: 640px; --bp-md: 768px; --bp-lg: 1024px; --bp-xl: 1280px; */
+}
+
+/* ============================================================
+   DIGIVIRASAT — Dark Design Tokens
+   ============================================================ */
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  /* ── Color palette ─────────────────────────────────────── */
+
+  /* Backgrounds */
+  --color-bg:              #0e1210;   /* deep rich charcoal/slate */
+  --color-surface:         #181d1a;   /* elevated card/surface */
+  --color-surface-muted:   #1e2420;   /* subtle dark fills */
+  --color-surface-dark:    #111513;   /* deep background sections */
+  --color-surface-dark-2:  #141916;
+
+  /* Text */
+  --color-text:            #f0f4f1;   /* soft high-contrast off-white */
+  --color-text-secondary:  #c2ccc5;   /* secondary body text */
+  --color-text-muted:      #869189;   /* labels, timestamps */
+  --color-text-inverse:    #0e1210;
+  --color-text-inverse-muted: rgba(240, 244, 241, 0.55);
+
+  /* Brand primary */
+  --color-primary:         #3b82f6;
+  --color-primary-hover:   #2563eb;
+  --color-primary-deep:    #1d4ed8;
+  --color-primary-soft:    rgba(59, 130, 246, 0.16);
+  --color-primary-border:  rgba(59, 130, 246, 0.35);
+
+  /* Borders */
+  --color-border:          rgba(255, 255, 255, 0.09);
+  --color-border-strong:   rgba(255, 255, 255, 0.18);
+
+  /* Semantic */
+  --color-success:         #22c55e;
+  --color-success-soft:    rgba(34, 197, 94, 0.16);
+  --color-warning:         #f59e0b;
+  --color-warning-soft:    rgba(245, 158, 11, 0.16);
+  --color-danger:          #ef4444;
+  --color-danger-soft:     rgba(239, 68, 68, 0.16);
+
+  /* Derived transparencies */
+  --color-black-04:        rgba(255, 255, 255, 0.03);
+  --color-black-08:        rgba(255, 255, 255, 0.06);
+  --color-black-12:        rgba(255, 255, 255, 0.10);
+  --color-white-08:        rgba(255, 255, 255, 0.08);
+  --color-white-12:        rgba(255, 255, 255, 0.12);
+  --color-white-20:        rgba(255, 255, 255, 0.20);
+  --color-white-40:        rgba(255, 255, 255, 0.40);
+  --color-white-60:        rgba(255, 255, 255, 0.60);
+  --color-primary-08:      rgba(59, 130, 246, 0.08);
+  --color-primary-16:      rgba(59, 130, 246, 0.16);
+
+  /* Shell, panel & UI tokens */
+  --color-shell-bg:        radial-gradient(circle at 82% 5%, rgba(32, 42, 35, .4), transparent 28%),
+                           radial-gradient(circle at 10% 30%, rgba(20, 26, 22, .6), transparent 34%),
+                           linear-gradient(135deg, #0e1210, #131714 55%, #0f1311);
+  --color-panel-bg:        rgba(24, 29, 26, 0.88);
+  --color-panel-shadow:    0 13px 30px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --color-row-hover:       rgba(255, 255, 255, 0.04);
+  --color-stat-bg:         rgba(24, 29, 26, 0.75);
+  --color-header-icon-bg:  rgba(30, 36, 32, 0.85);
+  --color-modal-overlay:   rgba(0, 0, 0, 0.72);
+  --color-input-bg:        #141815;
+  --color-input-border:    rgba(255, 255, 255, 0.14);
+
+  /* Shadows in dark mode */
+  --shadow-xs:             0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm:             0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-md:             0 4px 16px rgba(0, 0, 0, 0.55);
+  --shadow-lg:             0 12px 40px rgba(0, 0, 0, 0.65);
+  --shadow-xl:             0 24px 64px rgba(0, 0, 0, 0.75);
+
+  /* Workspace & Dashboard bridge tokens */
+  --w-bg:                  #0e1210;
+  --w-ink:                 #f0f4f1;
+  --w-muted:               #869189;
+  --w-line:                rgba(255, 255, 255, 0.09);
+
+  --dv-bg:                 #0e1210;
+  --dv-surface:            rgba(24, 29, 26, 0.88);
+  --dv-surface-solid:      #181d1a;
+  --dv-ink:                #f0f4f1;
+  --dv-muted:              #869189;
+  --dv-line:               rgba(255, 255, 255, 0.09);
+  --dv-soft:               #1e2420;
+  --dv-dark:               #111513;
+  --dv-green:              #7da589;
 }

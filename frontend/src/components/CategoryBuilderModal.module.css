@@ -16,14 +16,16 @@
   to { opacity: 1; }
 }
 
-.modal {
+.modal,
+.modalContent {
   width: 100%;
   max-width: 540px;
   max-height: 90vh;
   overflow-y: auto;
-  background: #ffffff;
+  background: var(--color-surface, #ffffff);
   border-radius: 18px;
-  box-shadow: 0 20px 48px rgba(23, 25, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-xl, 0 20px 48px rgba(23, 25, 23, 0.18));
+  border: 1px solid var(--w-line);
   padding: 22px 24px;
   position: relative;
   display: flex;
@@ -35,7 +37,7 @@
   align-items: center;
   justify-content: space-between;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(30, 35, 32, 0.08);
+  border-bottom: 1px solid var(--w-line);
   margin-bottom: 14px;
 }
 
@@ -49,7 +51,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #171917;
+  color: var(--w-ink, #171917);
   letter-spacing: -0.02em;
 }
 
@@ -57,7 +59,7 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #7d847f;
+  color: var(--w-muted, #7d847f);
   padding: 6px;
   border-radius: 8px;
   display: grid;
@@ -65,8 +67,8 @@
 }
 
 .closeBtn:hover {
-  background: #f0f3f0;
-  color: #171917;
+  background: var(--color-surface-muted, #f0f3f0);
+  color: var(--w-ink, #171917);
 }
 
 .errorBanner {
@@ -97,7 +99,7 @@
 .label {
   font-size: 10px;
   font-weight: 650;
-  color: #49504b;
+  color: var(--w-muted, #49504b);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -107,9 +109,9 @@
   box-sizing: border-box;
   padding: 8px 12px;
   font-size: 12px;
-  color: #171917;
-  background: #f8faf8;
-  border: 1px solid rgba(30, 35, 32, 0.14);
+  color: var(--w-ink, #171917);
+  background: var(--color-input-bg, #f8faf8);
+  border: 1px solid var(--color-input-border, rgba(30, 35, 32, 0.14));
   border-radius: 8px;
   font-family: inherit;
   outline: none;
@@ -117,8 +119,8 @@
 }
 
 .input:focus {
-  background: #ffffff;
-  border-color: #1b4fd8;
+  background: var(--color-surface, #ffffff);
+  border-color: var(--color-primary, #1b4fd8);
   box-shadow: 0 0 0 3px rgba(27, 79, 216, 0.1);
 }
 
@@ -128,7 +130,7 @@
   gap: 8px;
   margin-top: 4px;
   padding-top: 12px;
-  border-top: 1px solid rgba(30, 35, 32, 0.08);
+  border-top: 1px solid var(--w-line);
 }
 
 .fieldsHead {
@@ -200,8 +202,8 @@
 
 .miniBtn {
   background: transparent;
-  border: 1px solid rgba(30, 35, 32, 0.12);
-  color: #667169;
+  border: 1px solid var(--w-line);
+  color: var(--w-muted, #667169);
   border-radius: 5px;
   padding: 4px 6px;
   cursor: pointer;
@@ -210,8 +212,8 @@
 }
 
 .miniBtn:hover:not(:disabled) {
-  background: #eef2ee;
-  color: #171917;
+  background: var(--color-surface-muted, #eef2ee);
+  color: var(--w-ink, #171917);
 }
 
 .miniBtn:disabled {
@@ -220,15 +222,15 @@
 }
 
 .deleteMiniBtn:hover:not(:disabled) {
-  background: #fee2e2;
-  color: #dc2626;
-  border-color: #fecaca;
+  background: var(--color-danger-soft, #fee2e2);
+  color: var(--color-danger, #dc2626);
+  border-color: rgba(220, 38, 38, 0.2);
 }
 
 .addFieldBtn {
   background: transparent;
-  border: 1px dashed rgba(30, 35, 32, 0.2);
-  color: #171917;
+  border: 1px dashed var(--w-line);
+  color: var(--w-ink, #171917);
   font-size: 11px;
   font-weight: 550;
   padding: 7px 12px;
@@ -242,7 +244,7 @@
 }
 
 .addFieldBtn:hover {
-  background: #f0f3f0;
+  background: var(--color-surface-muted, #f0f3f0);
   border-style: solid;
 }
 
@@ -252,13 +254,13 @@
   gap: 8px;
   margin-top: 10px;
   padding-top: 12px;
-  border-top: 1px solid rgba(30, 35, 32, 0.08);
+  border-top: 1px solid var(--w-line);
 }
 
 .cancelBtn {
   background: transparent;
-  border: 1px solid rgba(30, 35, 32, 0.14);
-  color: #49504b;
+  border: 1px solid var(--w-line);
+  color: var(--w-muted, #49504b);
   font-size: 11px;
   font-weight: 550;
   padding: 7px 14px;
@@ -267,11 +269,12 @@
 }
 
 .cancelBtn:hover {
-  background: #f0f3f0;
+  background: var(--color-surface-muted, #f0f3f0);
+  color: var(--w-ink);
 }
 
 .submitBtn {
-  background: #171917;
+  background: var(--color-primary, #171917);
   border: none;
   color: #ffffff;
   font-size: 11px;
@@ -282,7 +285,7 @@
 }
 
 .submitBtn:hover {
-  background: #000000;
+  background: var(--color-primary-hover, #000000);
 }
 
 .submitBtn:disabled,

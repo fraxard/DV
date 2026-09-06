@@ -4,13 +4,15 @@ import {
   AlertTriangle, ArrowLeft, Briefcase, Building, CalendarDays, Check, ChevronLeft, ChevronRight,
   Coins, Download, FileCheck, FileText, FolderOpen, Globe, Landmark, Pencil,
   Percent, Plus, Search, Settings, ShieldCheck, Trash2, TrendingUp, Upload,
-  UploadCloud, UserCheck, UserPlus, UsersRound, WalletCards, X, Clock, FolderPlus
+  UploadCloud, UserCheck, UserPlus, UsersRound, WalletCards, X, Clock, FolderPlus,
+  Sun, Moon
 } from 'lucide-react';
 import styles from './WorkspacePage.module.css';
 import BottomNav from '../components/BottomNav';
 import TaskModal from '../components/tasks/TaskModal';
 import DayTaskModal from '../components/tasks/DayTaskModal';
 import CategoryBuilderModal from '../components/CategoryBuilderModal';
+import { useTheme } from '../context/ThemeContext';
 import {
   formatTaskDate,
   formatTaskTime,
@@ -117,11 +119,11 @@ const configs = {
     description: 'Manage your workspace preferences and account-level options.',
     icon: Settings,
     actions: [],
-    stats: [['Secure', 'session'], ['7 days', 'session window'], ['On', 'notifications']],
+    stats: [['Secure', 'session'], ['7 days', 'session window'], ['Light', 'theme']],
     rows: [
       ['Profile', 'Personal information', 'Available'],
       ['Security', 'Session and access', 'Protected'],
-      ['Notifications', 'Workspace alerts', 'Enabled'],
+      ['Theme', 'Choose how DigiVirasat looks across the application.', 'Toggle'],
       ['Preferences', 'Display options', 'Available'],
     ],
   },
@@ -258,6 +260,7 @@ const RELATIONSHIPS = [
 export default function WorkspacePage({ section }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const config = configs[section] || configs.vault;
   const Icon = config.icon;
   const hasNew = new URLSearchParams(location.search).get('new');
@@ -1403,6 +1406,12 @@ export default function WorkspacePage({ section }) {
         ],
         [String(tasks.filter((t) => t.status === 'completed').length).padStart(2, '0'), 'completed'],
       ]
+    : section === 'settings'
+    ? [
+        ['Secure', 'session'],
+        ['7 days', 'session window'],
+        [theme === 'dark' ? 'Dark' : 'Light', 'theme'],
+      ]
     : config.stats;
 
   return (
@@ -1429,12 +1438,38 @@ export default function WorkspacePage({ section }) {
         )}
 
         <section className={styles.stats}>
-          {currentStats.map(([value, label]) => (
-            <div className={styles.stat} key={label}>
-              <strong>{value}</strong>
-              <span>{label}</span>
-            </div>
-          ))}
+          {currentStats.map(([value, label], idx) => {
+            if (section === 'settings' && idx === 2) {
+              return (
+                <div className={`${styles.stat} ${styles.statTheme}`} key={label}>
+                  <div className={styles.statThemeHeader}>
+                    <strong>{theme === 'dark' ? 'Dark' : 'Light'}</strong>
+                    <span>THEME</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.statThemeToggleBtn}
+                    onClick={toggleTheme}
+                    aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+                    title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+                  >
+                    <span className={`${styles.themeOption} ${theme === 'light' ? styles.themeOptionActive : ''}`}>
+                      <Sun size={10} /> Light
+                    </span>
+                    <span className={`${styles.themeOption} ${theme === 'dark' ? styles.themeOptionActive : ''}`}>
+                      <Moon size={10} /> Dark
+                    </span>
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <div className={styles.stat} key={label}>
+                <strong>{value}</strong>
+                <span>{label}</span>
+              </div>
+            );
+          })}
         </section>
 
         <section className={styles.panel}>
@@ -2421,21 +2456,38 @@ export default function WorkspacePage({ section }) {
                 </div>
               </div>
             ) : (
-              config.rows.map(([title, meta, status]) => (
-                <div className={styles.row} key={`${title}-${meta}`}>
-                  <div className={styles.rowIcon}><Icon size={14} /></div>
-                  <div className={styles.rowMain}>
-                    <strong>{title}</strong>
-                    <span>{meta}</span>
+              config.rows.map(([title, meta, status]) => {
+                if (title === 'Theme') {
+                  return (
+                    <div className={styles.row} key={`${title}-${meta}`}>
+                      <div className={styles.rowIcon}>
+                        {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+                      </div>
+                      <div className={styles.rowMain}>
+                        <strong>Theme</strong>
+                        <span>{meta}</span>
+                      </div>
+                      <span className={styles.status}>System default</span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className={styles.row} key={`${title}-${meta}`}>
+                    <div className={styles.rowIcon}><Icon size={14} /></div>
+                    <div className={styles.rowMain}>
+                      <strong>{title}</strong>
+                      <span>{meta}</span>
+                    </div>
+                    <span className={styles.status}>{status}</span>
                   </div>
-                  <span className={styles.status}>{status}</span>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
 
-        {!isDocSection && !isVaultSection && !isNomineeSection && section !== 'activity' && section !== 'calendar' && (
+        {!isDocSection && !isVaultSection && !isNomineeSection && section !== 'activity' && section !== 'calendar' && section !== 'settings' && (
           <section className={styles.empty}>
             <Search size={15} />
             <div>
@@ -2443,6 +2495,12 @@ export default function WorkspacePage({ section }) {
               <span>The next step is replacing these preview records with live API data.</span>
             </div>
           </section>
+        )}
+
+        {section === 'settings' && (
+          <div className={styles.settingsFooter}>
+            © DigiVirasat
+          </div>
         )}
 
         {/* =========================================================
