@@ -2435,7 +2435,7 @@ export default function WorkspacePage({ section }) {
           </div>
         </section>
 
-        {!isDocSection && !isVaultSection && !isNomineeSection && section !== 'activity' && (
+        {!isDocSection && !isVaultSection && !isNomineeSection && section !== 'activity' && section !== 'calendar' && (
           <section className={styles.empty}>
             <Search size={15} />
             <div>
