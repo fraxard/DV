@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import WorkspacePage from './pages/WorkspacePage';
+import AssetDetails from './pages/AssetDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 // import VerifyEmail from './pages/VerifyEmail';
@@ -43,6 +44,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/vault" element={<WorkspacePage section="vault" />} />
+          <Route path="/vault/:assetId" element={<AssetDetails />} />
           <Route path="/nominees" element={<WorkspacePage section="nominees" />} />
           <Route path="/activity" element={<WorkspacePage section="activity" />} />
           <Route path="/documents" element={<WorkspacePage section="documents" />} />

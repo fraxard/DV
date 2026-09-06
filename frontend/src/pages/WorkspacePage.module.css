@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --w-bg: #edf1ee;
   --w-ink: #171917;
   --w-muted: #7d847f;
@@ -818,3 +818,240 @@
   font-size: 9px;
   font-weight: 650;
 }
+
+/* ============================================================
+   PHASE 4C VAULT CATEGORY SECTIONS, SEARCH & CLICKABLE ROWS
+   ============================================================ */
+
+.clickableRow {
+  cursor: pointer;
+  transition: background 0.15s ease, padding 0.15s ease;
+  border-radius: 9px;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.clickableRow:hover {
+  background: rgba(235, 240, 236, 0.75);
+}
+
+.clickableRow:focus-visible {
+  outline: 2px solid #1b4fd8;
+  outline-offset: -2px;
+}
+
+.rowChevron {
+  color: #9ba39d;
+  display: grid;
+  place-items: center;
+  margin-left: 2px;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.clickableRow:hover .rowChevron {
+  color: #171917;
+  transform: translateX(2px);
+}
+
+.categorySection {
+  margin-bottom: 22px;
+  border-radius: 14px;
+  background: rgba(250, 251, 250, 0.7);
+  border: 1px solid rgba(30, 35, 32, 0.06);
+  padding: 14px 16px;
+}
+
+.categoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(30, 35, 32, 0.05);
+  gap: 12px;
+}
+
+.categoryHeaderMain {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.categoryHeaderIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #eef2ef;
+  display: grid;
+  place-items: center;
+  color: #4a554e;
+  flex-shrink: 0;
+}
+
+.categoryHeaderTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.categoryTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: #171917;
+  letter-spacing: -0.02em;
+}
+
+.categoryBadge {
+  font-size: 9px;
+  font-weight: 600;
+  color: #657069;
+  background: #edf1ee;
+  padding: 2px 7px;
+  border-radius: 99px;
+}
+
+.categoryDesc {
+  margin: 0;
+  font-size: 10px;
+  color: #7b837d;
+  line-height: 1.4;
+}
+
+.categoryTotal {
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.categoryTotalLabel {
+  font-size: 8px;
+  font-weight: 700;
+  color: #8a918c;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.categoryTotalValue {
+  font-size: 12px;
+  font-weight: 700;
+  color: #171917;
+}
+
+.categoryRows {
+  display: flex;
+  flex-direction: column;
+}
+
+.vaultControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.vaultSearchWrapper {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.vaultSearchInput {
+  width: 100%;
+  padding: 8px 12px 8px 30px;
+  border-radius: 9px;
+  border: 1px solid rgba(30, 35, 32, 0.12);
+  background: #ffffff;
+  font-size: 11px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.vaultSearchInput:focus {
+  border-color: #1b4fd8;
+}
+
+.vaultSearchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8c938e;
+  pointer-events: none;
+}
+
+.vaultPills {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.vaultPill {
+  padding: 5px 11px;
+  border-radius: 99px;
+  border: 1px solid rgba(30, 35, 32, 0.08);
+  background: #ffffff;
+  color: #555d57;
+  font-size: 10px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vaultPill:hover {
+  background: #f2f5f2;
+}
+
+.vaultPillActive {
+  background: #171917 !important;
+  color: #ffffff !important;
+  border-color: #171917 !important;
+}
+
+.vaultEmptyState {
+  padding: 36px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #fafbfa;
+  border-radius: 14px;
+  border: 1px solid rgba(30, 35, 32, 0.06);
+}
+
+.vaultEmptyIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #eef2ef;
+  display: grid;
+  place-items: center;
+  color: #667169;
+  margin-bottom: 4px;
+}
+
+.vaultEmptyState h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: #171917;
+}
+
+.vaultEmptyState p {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #7b837d;
+  max-width: 380px;
+  line-height: 1.5;
+}
+

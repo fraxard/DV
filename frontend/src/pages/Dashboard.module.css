@@ -1685,3 +1685,119 @@
 .activityCard:hover {
   color: inherit;
 }
+
+/* =========================================================
+   PHASE 4B: ERROR, LOADING & EMPTY STATES
+   ========================================================= */
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background: var(--dv-surface);
+  border: 1px solid var(--dv-line);
+  border-radius: 19px;
+  text-align: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.errorContainer h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: #242825;
+}
+
+.errorContainer p {
+  margin: 0;
+  font-size: 11px;
+  color: #7a827c;
+  max-width: 320px;
+}
+
+.retryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(24, 26, 25, 0.12);
+  border-radius: 9px;
+  background: #242825;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.retryBtn:hover {
+  background: #39403b;
+}
+
+.emptyStateText {
+  padding: 24px 12px;
+  text-align: center;
+  color: #8c938e;
+  font-size: 10px;
+}
+
+.emptyStateLink {
+  display: inline-block;
+  margin-top: 6px;
+  color: #4a6352;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.emptyAttentionCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(108, 141, 118, 0.2);
+  border-radius: 12px;
+  background: rgba(238, 245, 240, 0.6);
+  margin-top: 14px;
+  color: #47614f;
+  font-size: 10px;
+}
+
+.currencyPillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.currencyPill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f0f3f0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #29312b;
+}
+
+.currencyPill small {
+  font-size: 8px;
+  font-weight: 500;
+  color: #7b837d;
+}
+
+.skeletonPulse {
+  animation: dvPulse 1.6s ease-in-out infinite;
+  background: #e6eae7;
+  border-radius: 6px;
+}
+
+@keyframes dvPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}

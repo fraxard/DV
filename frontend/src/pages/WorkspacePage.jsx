@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowLeft, CalendarDays, Check, Download, FileCheck, FileText,
-  FolderOpen, Pencil, Percent, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UploadCloud,
-  UserCheck, UserPlus, UsersRound, WalletCards, X
+  AlertTriangle, ArrowLeft, Briefcase, Building, CalendarDays, Check, ChevronRight,
+  Coins, Download, FileCheck, FileText, FolderOpen, Globe, Landmark, Pencil,
+  Percent, Plus, Search, Settings, ShieldCheck, Trash2, TrendingUp, Upload,
+  UploadCloud, UserCheck, UserPlus, UsersRound, WalletCards, X
 } from 'lucide-react';
 import styles from './WorkspacePage.module.css';
 
@@ -99,6 +100,95 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+const formatCurrency = (val, curr = 'INR') => {
+  if (val === null || val === undefined || isNaN(Number(val))) return 'Not valued';
+  const num = Number(val);
+  const currencyCode = (curr || 'INR').toUpperCase();
+  if (currencyCode === 'INR') {
+    return `₹${num.toLocaleString('en-IN')}`;
+  }
+  return `${currencyCode} ${num.toLocaleString('en-US')}`;
+};
+
+const VAULT_CATEGORIES = {
+  property: {
+    label: 'Property',
+    description: 'Real estate, land, and physical property holdings',
+    icon: Building,
+  },
+  financial: {
+    label: 'Financial',
+    description: 'Bank accounts, savings, deposits and financial holdings',
+    icon: Landmark,
+  },
+  crypto: {
+    label: 'Crypto',
+    description: 'Digital currencies, tokens, wallets and exchange accounts',
+    icon: Coins,
+  },
+  insurance: {
+    label: 'Insurance',
+    description: 'Policies, health, term and protection records',
+    icon: ShieldCheck,
+  },
+  digital: {
+    label: 'Digital',
+    description: 'Online accounts, domains, cloud services and digital assets',
+    icon: Globe,
+  },
+  legal: {
+    label: 'Legal',
+    description: 'Wills, trusts, powers of attorney and legal records',
+    icon: FileText,
+  },
+  business: {
+    label: 'Business',
+    description: 'Companies, partnerships, equity and commercial holdings',
+    icon: Briefcase,
+  },
+  investments: {
+    label: 'Investments',
+    description: 'Mutual funds, stocks, bonds and investment portfolios',
+    icon: TrendingUp,
+  },
+  other: {
+    label: 'Other Assets',
+    description: 'Vehicles, valuables, heirlooms and miscellaneous legacy items',
+    icon: FolderOpen,
+  },
+};
+
+const getVaultCategoryMeta = (cat) => {
+  const key = (cat || 'other').toLowerCase().trim();
+  if (VAULT_CATEGORIES[key]) return VAULT_CATEGORIES[key];
+  return {
+    label: key.charAt(0).toUpperCase() + key.slice(1),
+    description: 'Recorded legacy items and assets',
+    icon: FolderOpen,
+  };
+};
+
+const formatCategoryValuation = (catAssets) => {
+  const byCurr = {};
+  for (const a of catAssets) {
+    if (a.estimated_value !== null && a.estimated_value !== undefined && !isNaN(Number(a.estimated_value))) {
+      const c = (a.currency || 'INR').toUpperCase();
+      byCurr[c] = (byCurr[c] || 0) + Number(a.estimated_value);
+    }
+  }
+  const currKeys = Object.keys(byCurr);
+  if (currKeys.length === 0) return null;
+  if (currKeys.length === 1) {
+    const c = currKeys[0];
+    if (c === 'INR') return `₹${byCurr[c].toLocaleString('en-IN')}`;
+    return `${c} ${byCurr[c].toLocaleString('en-US')}`;
+  }
+  return currKeys.map((c) => {
+    if (c === 'INR') return `₹${byCurr[c].toLocaleString('en-IN')}`;
+    return `${c} ${byCurr[c].toLocaleString('en-US')}`;
+  }).join(' · ');
+};
+
 const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -135,6 +225,17 @@ export default function WorkspacePage({ section }) {
   const [loadingDocs, setLoadingDocs] = useState(section === 'documents');
   const [loadingAssets, setLoadingAssets] = useState(section === 'vault');
   const [loadingNominees, setLoadingNominees] = useState(section === 'nominees');
+
+  // Vault Category Filtering & Search state
+  const categoryParam = new URLSearchParams(location.search).get('category');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(categoryParam ? categoryParam.toLowerCase() : 'all');
+
+  useEffect(() => {
+    if (categoryParam) {
+      setSelectedCategory(categoryParam.toLowerCase());
+    }
+  }, [categoryParam]);
 
   // Add / Edit Asset modal state
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
@@ -305,6 +406,7 @@ export default function WorkspacePage({ section }) {
     } else if (isVaultSection) {
       fetchAssets();
       fetchNominees();
+      fetchDocuments();
     } else if (isNomineeSection) {
       fetchNominees();
       fetchAssets();
@@ -951,9 +1053,17 @@ export default function WorkspacePage({ section }) {
       ]
     : isVaultSection
     ? [
-        [assets.length.toString(), 'total assets'],
-        [new Set(assets.map((a) => a.category)).size.toString(), 'categories'],
-        ['0', 'need review'],
+        [String(assets.length).padStart(2, '0'), 'total assets'],
+        [String(new Set(assets.map((a) => (a.category || 'other').toLowerCase().trim())).size).padStart(2, '0'), 'categories'],
+        [
+          String(
+            assets.filter((a) => {
+              const hasDoc = documents.some((d) => d.asset_id === a.id);
+              return !hasDoc || !a.estimated_value;
+            }).length
+          ).padStart(2, '0'),
+          'need review',
+        ],
       ]
     : isNomineeSection
     ? [
@@ -1089,53 +1199,213 @@ export default function WorkspacePage({ section }) {
                   Loading assets...
                 </div>
               ) : assets.length === 0 ? (
-                <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
-                  No assets recorded in your vault yet. Click "Add asset" to begin cataloguing your digital legacy.
-                </div>
-              ) : (
-                assets.map((asset) => (
-                  <div className={styles.row} key={asset.id}>
-                    <div className={styles.rowIcon}><FolderOpen size={14} /></div>
-                    <div className={styles.rowMain}>
-                      <strong>{asset.name}</strong>
-                      <span>
-                        {asset.category.charAt(0).toUpperCase() + asset.category.slice(1)}
-                        {asset.subcategory ? ` · ${asset.subcategory}` : ''}
-                        {asset.estimated_value ? ` · ${asset.currency || 'INR'} ${Number(asset.estimated_value).toLocaleString('en-IN')}` : ''}
-                      </span>
-                    </div>
-                    <div className={styles.itemActions}>
-                      <button
-                        onClick={() => handleOpenAllocations(asset)}
-                        className={styles.iconActionBtn}
-                        title="Manage Nominees & Allocations"
-                        aria-label="Manage Nominees & Allocations"
-                        type="button"
-                      >
-                        <UsersRound size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleOpenEditAsset(asset)}
-                        className={styles.iconActionBtn}
-                        title="Edit asset"
-                        aria-label="Edit asset"
-                        type="button"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleOpenDeleteAssetConfirm(asset)}
-                        className={styles.iconActionBtn}
-                        title="Delete asset"
-                        aria-label="Delete asset"
-                        type="button"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+                <div className={styles.vaultEmptyState}>
+                  <div className={styles.vaultEmptyIcon}>
+                    <FolderOpen size={24} />
                   </div>
-                ))
-              )
+                  <h3>Your Vault</h3>
+                  <p>Nothing here yet. Start organising the assets, records and information that make up your digital legacy.</p>
+                  <button
+                    type="button"
+                    className={styles.submitBtn}
+                    onClick={handleOpenAddAsset}
+                    style={{ margin: '4px auto 0' }}
+                  >
+                    <Plus size={13} /> Add your first asset
+                  </button>
+                </div>
+              ) : (() => {
+                // Compute available categories from user's actual assets
+                const availableCategories = Array.from(
+                  new Set(assets.map((a) => (a.category || 'other').toLowerCase().trim()))
+                );
+
+                // Filter by search and selectedCategory
+                const filteredAssets = assets.filter((asset) => {
+                  const cat = (asset.category || 'other').toLowerCase().trim();
+                  const matchesCategory = selectedCategory === 'all' || cat === selectedCategory;
+                  const query = searchQuery.toLowerCase().trim();
+                  const matchesSearch =
+                    !query ||
+                    asset.name.toLowerCase().includes(query) ||
+                    (asset.subcategory && asset.subcategory.toLowerCase().includes(query)) ||
+                    (asset.description && asset.description.toLowerCase().includes(query));
+                  return matchesCategory && matchesSearch;
+                });
+
+                // Group filtered assets by category
+                const groupedAssets = {};
+                filteredAssets.forEach((asset) => {
+                  const cat = (asset.category || 'other').toLowerCase().trim();
+                  if (!groupedAssets[cat]) groupedAssets[cat] = [];
+                  groupedAssets[cat].push(asset);
+                });
+
+                return (
+                  <div>
+                    {/* Controls: Search & Category Filter Pills */}
+                    <div className={styles.vaultControls}>
+                      <div className={styles.vaultSearchWrapper}>
+                        <Search size={13} className={styles.vaultSearchIcon} />
+                        <input
+                          type="text"
+                          className={styles.vaultSearchInput}
+                          placeholder="Search assets by name or details..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.vaultPills}>
+                        <button
+                          type="button"
+                          className={`${styles.vaultPill} ${selectedCategory === 'all' ? styles.vaultPillActive : ''}`}
+                          onClick={() => setSelectedCategory('all')}
+                        >
+                          All ({assets.length})
+                        </button>
+                        {availableCategories.map((catKey) => {
+                          const catMeta = getVaultCategoryMeta(catKey);
+                          const count = assets.filter((a) => (a.category || 'other').toLowerCase().trim() === catKey).length;
+                          return (
+                            <button
+                              key={catKey}
+                              type="button"
+                              className={`${styles.vaultPill} ${selectedCategory === catKey ? styles.vaultPillActive : ''}`}
+                              onClick={() => setSelectedCategory(catKey)}
+                            >
+                              {catMeta.label} ({count})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {filteredAssets.length === 0 ? (
+                      <div className={styles.vaultEmptyState}>
+                        <Search size={22} color="#8c938e" />
+                        <h3>No matching assets</h3>
+                        <p>No records matched your search query or category filter.</p>
+                        <button
+                          type="button"
+                          className={styles.cancelBtn}
+                          onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+                          style={{ margin: '4px auto 0' }}
+                        >
+                          Clear filters
+                        </button>
+                      </div>
+                    ) : (
+                      Object.entries(groupedAssets).map(([catKey, catAssets]) => {
+                        const catMeta = getVaultCategoryMeta(catKey);
+                        const CatIcon = catMeta.icon;
+                        const catTotal = formatCategoryValuation(catAssets);
+
+                        return (
+                          <div className={styles.categorySection} key={catKey}>
+                            <div className={styles.categoryHeader}>
+                              <div className={styles.categoryHeaderMain}>
+                                <div className={styles.categoryHeaderIcon}>
+                                  <CatIcon size={16} />
+                                </div>
+                                <div>
+                                  <div className={styles.categoryHeaderTitleRow}>
+                                    <h3 className={styles.categoryTitle}>{catMeta.label}</h3>
+                                    <span className={styles.categoryBadge}>
+                                      {catAssets.length} {catAssets.length === 1 ? 'asset' : 'assets'}
+                                    </span>
+                                  </div>
+                                  <p className={styles.categoryDesc}>{catMeta.description}</p>
+                                </div>
+                              </div>
+                              {catTotal && (
+                                <div className={styles.categoryTotal}>
+                                  <span className={styles.categoryTotalLabel}>Estimated Total</span>
+                                  <strong className={styles.categoryTotalValue}>{catTotal}</strong>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className={styles.categoryRows}>
+                              {catAssets.map((asset) => {
+                                const docCount = documents.filter((d) => d.asset_id === asset.id).length;
+                                return (
+                                  <div
+                                    className={`${styles.row} ${styles.clickableRow}`}
+                                    key={asset.id}
+                                    onClick={() => navigate(`/vault/${asset.id}`)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        navigate(`/vault/${asset.id}`);
+                                      }
+                                    }}
+                                  >
+                                    <div className={styles.rowIcon}>
+                                      <CatIcon size={14} />
+                                    </div>
+                                    <div className={styles.rowMain}>
+                                      <strong>{asset.name}</strong>
+                                      <span>
+                                        {catMeta.label}
+                                        {asset.subcategory ? ` · ${asset.subcategory}` : ''}
+                                        {asset.estimated_value ? ` · ${formatCurrency(asset.estimated_value, asset.currency)}` : ' · Not valued'}
+                                        {docCount > 0 ? ` · ${docCount} ${docCount === 1 ? 'doc' : 'docs'}` : ''}
+                                      </span>
+                                    </div>
+                                    <div className={styles.itemActions}>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenAllocations(asset);
+                                        }}
+                                        className={styles.iconActionBtn}
+                                        title="Manage Nominees & Allocations"
+                                        aria-label="Manage Nominees & Allocations"
+                                        type="button"
+                                      >
+                                        <UsersRound size={13} />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenEditAsset(asset);
+                                        }}
+                                        className={styles.iconActionBtn}
+                                        title="Edit asset"
+                                        aria-label="Edit asset"
+                                        type="button"
+                                      >
+                                        <Pencil size={13} />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenDeleteAssetConfirm(asset);
+                                        }}
+                                        className={styles.iconActionBtn}
+                                        title="Delete asset"
+                                        aria-label="Delete asset"
+                                        type="button"
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                      <span className={styles.rowChevron}>
+                                        <ChevronRight size={14} />
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                );
+              })()
             ) : isNomineeSection ? (
               loadingNominees ? (
                 <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>

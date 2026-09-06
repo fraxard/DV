@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
+  AlertTriangle,
   Bell,
   CalendarDays,
   Check,
@@ -16,6 +17,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Plus,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
   TrendingUp,
@@ -27,26 +29,55 @@ import styles from './Dashboard.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const categories = [
-  { name: 'Financial', count: 4, icon: Landmark },
-  { name: 'Investments', count: 5, icon: TrendingUp },
-  { name: 'Documents', count: 12, icon: FileText },
-  { name: 'Property', count: 2, icon: Home },
-  { name: 'Insurance', count: 3, icon: ShieldCheck },
-  { name: 'Digital', count: 7, icon: KeyRound },
-];
+const CATEGORY_ICONS = {
+  financial: Landmark,
+  investments: TrendingUp,
+  investment: TrendingUp,
+  documents: FileText,
+  document: FileText,
+  property: Home,
+  real_estate: Home,
+  insurance: ShieldCheck,
+  digital: KeyRound,
+  business: Landmark,
+  vehicle: Home,
+};
+
+function getCategoryIcon(catKey) {
+  const normalized = String(catKey || '').toLowerCase().trim();
+  return CATEGORY_ICONS[normalized] || WalletCards;
+}
+
+function formatCategoryName(catKey) {
+  if (!catKey) return 'Asset';
+  return String(catKey)
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatCurrencyAmount(amount, currency = 'INR') {
+  const num = Number(amount || 0);
+  const curr = String(currency || 'INR').toUpperCase();
+  if (curr === 'INR') {
+    return `₹${num.toLocaleString('en-IN')}`;
+  }
+  if (curr === 'USD') {
+    return `$${num.toLocaleString('en-US')}`;
+  }
+  if (curr === 'EUR') {
+    return `€${num.toLocaleString('de-DE')}`;
+  }
+  if (curr === 'GBP') {
+    return `£${num.toLocaleString('en-GB')}`;
+  }
+  return `${curr} ${num.toLocaleString()}`;
+}
 
 const activity = [
   { time: '02:42 PM', title: 'Passport added', meta: 'Documents', icon: FileText },
   { time: '11:18 AM', title: 'Nominee updated', meta: 'People', icon: UsersRound },
   { time: 'Yesterday', title: 'Insurance policy added', meta: 'Protection', icon: ShieldCheck },
   { time: '31 Aug', title: 'Bank account added', meta: 'Financial', icon: Landmark },
-];
-
-const todayItems = [
-  { title: 'Review nominee allocation', meta: 'Nominees', done: false },
-  { title: 'Check insurance renewal', meta: 'Protection', done: false },
-  { title: 'Upload missing document', meta: 'Documents', done: false },
 ];
 
 const calendarEvents = {
@@ -84,6 +115,13 @@ const Dashboard = () => {
     new Date(now.getFullYear(), now.getMonth(), 1)
   );
   const [selectedDay, setSelectedDay] = useState(now.getDate());
+
+  // Phase 4A Live Dashboard Data
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+  const [dashboardError, setDashboardError] = useState(null);
+
+  // Nominee summary list state
   const [nomineeSummary, setNomineeSummary] = useState({
     total_nominees: 0,
     total_assets: 0,
@@ -91,34 +129,47 @@ const Dashboard = () => {
   });
   const [loadingNominees, setLoadingNominees] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchDashboardNominees = async () => {
-      try {
-        setLoadingNominees(true);
-        const res = await fetch(`${API_URL}/nominees/dashboard-summary`, {
-          credentials: 'include',
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            setNomineeSummary(data);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load dashboard nominees:', err);
-      } finally {
-        if (isMounted) {
-          setLoadingNominees(false);
-        }
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setLoadingDashboard(true);
+      setDashboardError(null);
+      const res = await fetch(`${API_URL}/dashboard`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to load dashboard data (Status ${res.status})`);
       }
-    };
-
-    fetchDashboardNominees();
-    return () => {
-      isMounted = false;
-    };
+      const json = await res.json();
+      setDashboardData(json.data || json);
+    } catch (err) {
+      console.error('Error fetching dashboard:', err);
+      setDashboardError(err.message || 'Unable to connect to legacy engine.');
+    } finally {
+      setLoadingDashboard(false);
+    }
   }, []);
+
+  const fetchDashboardNominees = useCallback(async () => {
+    try {
+      setLoadingNominees(true);
+      const res = await fetch(`${API_URL}/nominees/dashboard-summary`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNomineeSummary(data);
+      }
+    } catch (err) {
+      console.error('Failed to load dashboard nominees:', err);
+    } finally {
+      setLoadingNominees(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+    fetchDashboardNominees();
+  }, [fetchDashboard, fetchDashboardNominees]);
   const location = useLocation();
   const activeNav = location.pathname === '/dashboard' ? 'Home'
     : location.pathname.startsWith('/vault') ? 'Vault'
@@ -141,6 +192,26 @@ const Dashboard = () => {
     setCalendarDate(new Date(year, month + delta, 1));
     setSelectedDay(1);
   };
+
+  // Extract live metrics with safe fallbacks
+  const readiness = dashboardData?.readiness || { score: 0, label: 'Getting Started', components: {} };
+  const assets = dashboardData?.assets || { total: 0, totalValue: 0, totalValueByCurrency: [], byCategory: [] };
+  const nominees = dashboardData?.nominees || { total: 0, assigned: 0, unassigned: 0, assetsWithoutAllocation: 0 };
+  const documents = dashboardData?.documents || { total: 0, assetsWithDocuments: 0, assetsWithoutDocuments: 0, coveragePercentage: 0 };
+  const allocation = dashboardData?.allocation || { coveragePercentage: 0 };
+  const needsAttention = dashboardData?.needsAttention || [];
+
+  const readinessScore = Math.max(0, Math.min(100, Math.round(readiness.score || 0)));
+  const readinessLabel = (readiness.label || 'Getting Started').toUpperCase();
+  const attentionCount = needsAttention.length;
+
+  const totalNomineeCount =
+    dashboardData?.nominees?.total ?? nomineeSummary.total_nominees;
+  const categoriesCount = assets.byCategory?.length || 0;
+
+  // Single currency or multi-currency determination
+  const isMultiCurrency = assets.totalValue === null && Array.isArray(assets.totalValueByCurrency) && assets.totalValueByCurrency.length > 1;
+  const singleCurrency = assets.totalValueByCurrency?.[0]?.currency || 'INR';
 
   return (
     <div className={styles.dashboardContainer}>
@@ -210,345 +281,519 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className={styles.mainGrid}>
-          {/* Hero */}
-          <section className={`${styles.card} ${styles.heroCard}`}>
-            <div className={styles.heroPattern} />
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>YOUR LEGACY</span>
-                <h2>Good evening.</h2>
-              </div>
-              <div className={styles.heroSpark}><Sparkles size={14} /></div>
-            </div>
-
-            <div className={styles.heroMiddle}>
-              <p>Your digital legacy is taking shape.</p>
-              <div className={styles.heroScoreRow}>
-                <strong>68<span>%</span></strong>
+        {dashboardError ? (
+          <div className={styles.errorContainer}>
+            <AlertTriangle size={24} color="#dc2626" />
+            <h3>Could not load dashboard</h3>
+            <p>{dashboardError}</p>
+            <button
+              className={styles.retryBtn}
+              onClick={() => {
+                fetchDashboard();
+                fetchDashboardNominees();
+              }}
+            >
+              <RefreshCw size={12} /> Retry
+            </button>
+          </div>
+        ) : (
+          <div className={styles.mainGrid}>
+            {/* Hero */}
+            <section className={`${styles.card} ${styles.heroCard}`}>
+              <div className={styles.heroPattern} />
+              <div className={styles.cardTop}>
                 <div>
-                  <span>LEGACY READY</span>
-                  <small>3 things need your attention</small>
+                  <span className={styles.cardKicker}>YOUR LEGACY</span>
+                  <h2>Good evening.</h2>
+                </div>
+                <div className={styles.heroSpark}><Sparkles size={14} /></div>
+              </div>
+
+              <div className={styles.heroMiddle}>
+                <p>Your digital legacy is taking shape.</p>
+                <div className={styles.heroScoreRow}>
+                  {loadingDashboard ? (
+                    <strong style={{ opacity: 0.5 }}>--<span>%</span></strong>
+                  ) : (
+                    <strong>{readinessScore}<span>%</span></strong>
+                  )}
+                  <div>
+                    <span>{loadingDashboard ? 'LOADING...' : readinessLabel}</span>
+                    <small>
+                      {loadingDashboard
+                        ? 'Calculating metrics...'
+                        : attentionCount === 0
+                          ? 'Everything is up to date'
+                          : `${attentionCount} thing${attentionCount > 1 ? 's' : ''} need${attentionCount === 1 ? 's' : ''} your attention`}
+                    </small>
+                  </div>
+                </div>
+                <div className={styles.progressTrack}>
+                  <div
+                    className={styles.progressValue}
+                    style={{
+                      width: loadingDashboard ? '0%' : `${readinessScore}%`,
+                      transition: 'width 0.4s ease',
+                    }}
+                  />
                 </div>
               </div>
-              <div className={styles.progressTrack}>
-                <div className={styles.progressValue} style={{ width: '68%' }} />
-              </div>
-            </div>
 
-            <div className={styles.heroFooter}>
-              <div><strong>24</strong><span>assets</span></div>
-              <div><strong>06</strong><span>categories</span></div>
-              <div><strong>{String(nomineeSummary.total_nominees).padStart(2, '0')}</strong><span>nominees</span></div>
-              <Link className={styles.darkAction} to="/vault">Continue <ChevronRight size={12} /></Link>
-            </div>
-          </section>
-
-          {/* Nominees */}
-          <section className={`${styles.card} ${styles.nomineeCardPanel}`}>
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>PEOPLE</span>
-                <h3>Nominees</h3>
-              </div>
-              <span className={styles.countPill}>
-                {String(nomineeSummary.total_nominees).padStart(2, '0')}
-              </span>
-            </div>
-
-            <div className={styles.nomineeList}>
-              {loadingNominees ? (
-                <div style={{ padding: '16px', textAlign: 'center', color: '#8c938e', fontSize: '11px' }}>
-                  Loading nominees...
+              <div className={styles.heroFooter}>
+                <div>
+                  <strong>{loadingDashboard ? '--' : String(assets.total).padStart(2, '0')}</strong>
+                  <span>assets</span>
                 </div>
-              ) : nomineeSummary.nominees.length === 0 ? (
-                <div style={{ padding: '16px', textAlign: 'center', color: '#8c938e', fontSize: '11px' }}>
-                  No nominees yet. Add your trusted beneficiaries.
+                <div>
+                  <strong>{loadingDashboard ? '--' : String(categoriesCount).padStart(2, '0')}</strong>
+                  <span>categories</span>
+                </div>
+                <div>
+                  <strong>{loadingDashboard && loadingNominees ? '--' : String(totalNomineeCount).padStart(2, '0')}</strong>
+                  <span>nominees</span>
+                </div>
+                <Link className={styles.darkAction} to="/vault">Continue <ChevronRight size={12} /></Link>
+              </div>
+            </section>
+
+            {/* Nominees */}
+            <section className={`${styles.card} ${styles.nomineeCardPanel}`}>
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>PEOPLE</span>
+                  <h3>Nominees</h3>
+                </div>
+                <span className={styles.countPill}>
+                  {loadingDashboard && loadingNominees ? '--' : String(totalNomineeCount).padStart(2, '0')}
+                </span>
+              </div>
+
+              <div className={styles.nomineeList}>
+                {loadingNominees ? (
+                  <div className={styles.emptyStateText}>
+                    Loading nominees...
+                  </div>
+                ) : nomineeSummary.nominees.length === 0 ? (
+                  <div className={styles.emptyStateText}>
+                    No nominees yet. Add your trusted beneficiaries.
+                    <br />
+                    <Link className={styles.emptyStateLink} to="/nominees?new=1">Add first nominee</Link>
+                  </div>
+                ) : (
+                  nomineeSummary.nominees.map((n, idx) => (
+                    <div className={styles.personRow} key={n.id}>
+                      <div className={`${styles.avatar} ${idx % 2 === 1 ? styles.avatarAlt : ''}`}>
+                        {(n.full_name || 'N').charAt(0).toUpperCase()}
+                      </div>
+                      <div className={styles.personInfo}>
+                        <strong>{n.full_name}</strong>
+                        <span>{n.relationship}</span>
+                      </div>
+                      <span className={styles.share}>
+                        {parseFloat(Number(n.overall_share || 0).toFixed(2))}%
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <Link className={styles.textAction} to="/nominees?new=1"><Plus size={12} /> Add nominee</Link>
+            </section>
+
+            {/* Calendar */}
+            <section className={`${styles.card} ${styles.calendarCard}`}>
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>PLAN AHEAD</span>
+                  <h3>Legacy calendar</h3>
+                </div>
+                <CalendarDays size={15} className={styles.mutedIcon} />
+              </div>
+
+              <div className={styles.calendarToolbar}>
+                <strong>{monthNames[month]} {year}</strong>
+                <div>
+                  <button onClick={() => changeMonth(-1)} aria-label="Previous month"><ChevronLeft size={13} /></button>
+                  <button onClick={() => changeMonth(1)} aria-label="Next month"><ChevronRight size={13} /></button>
+                </div>
+              </div>
+
+              <div className={styles.weekdays}>
+                {weekdayNames.map((day) => <span key={day}>{day}</span>)}
+              </div>
+
+              <div className={styles.calendarGrid}>
+                {calendar.map((day, index) => {
+                  const hasEvent = day && month === now.getMonth() && year === now.getFullYear() && calendarEvents[day];
+                  const isToday = day === now.getDate() && month === now.getMonth() && year === now.getFullYear();
+                  const isSelected = day === selectedDay;
+
+                  return (
+                    <button
+                      key={`${day || 'empty'}-${index}`}
+                      className={`${styles.dayCell} ${!day ? styles.dayEmpty : ''} ${isToday ? styles.dayToday : ''} ${isSelected ? styles.daySelected : ''}`}
+                      disabled={!day}
+                      onClick={() => day && setSelectedDay(day)}
+                    >
+                      {day}
+                      {hasEvent && <i />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className={styles.selectedEvent}>
+                <div className={styles.eventDot} />
+                <div>
+                  <span>{selectedEvents[0]?.label || 'No scheduled review'}</span>
+                  <small>{selectedEvents.length ? 'Scheduled legacy task' : 'Your calendar is clear'}</small>
+                </div>
+              </div>
+            </section>
+
+            {/* Today / Needs Attention */}
+            <section className={`${styles.card} ${styles.todayCard}`}>
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>ATTENTION</span>
+                  <h3>Today</h3>
+                </div>
+                <span className={styles.countPill}>
+                  {loadingDashboard ? '--' : String(attentionCount).padStart(2, '0')}
+                </span>
+              </div>
+
+              {loadingDashboard ? (
+                <div className={styles.emptyStateText}>Loading action items...</div>
+              ) : attentionCount === 0 ? (
+                <div className={styles.emptyAttentionCard}>
+                  <Check size={14} color="#6c8d76" />
+                  <span>No outstanding actions needed. Your legacy records are completely up to date!</span>
                 </div>
               ) : (
-                nomineeSummary.nominees.map((n, idx) => (
-                  <div className={styles.personRow} key={n.id}>
-                    <div className={`${styles.avatar} ${idx % 2 === 1 ? styles.avatarAlt : ''}`}>
-                      {(n.full_name || 'N').charAt(0).toUpperCase()}
-                    </div>
-                    <div className={styles.personInfo}>
-                      <strong>{n.full_name}</strong>
-                      <span>{n.relationship}</span>
-                    </div>
-                    <span className={styles.share}>
-                      {parseFloat(Number(n.overall_share || 0).toFixed(2))}%
-                    </span>
-                  </div>
-                ))
+                <div className={styles.todoList}>
+                  {needsAttention.slice(0, 3).map((item) => {
+                    const target = item.action === 'nominees'
+                      ? '/nominees?new=1'
+                      : item.action === 'allocations'
+                        ? '/nominees'
+                        : item.action === 'documents'
+                          ? '/documents?upload=1'
+                          : item.action === 'verify_email'
+                            ? '/verify-email'
+                            : '/vault?new=asset';
+
+                    const metaText = item.action === 'nominees'
+                      ? 'Nominees'
+                      : item.action === 'allocations'
+                        ? 'Allocations'
+                        : item.action === 'documents'
+                          ? 'Documents'
+                          : item.action === 'verify_email'
+                            ? 'Account'
+                            : 'Vault';
+
+                    return (
+                      <Link className={styles.todoRow} to={target} key={item.key}>
+                        <span className={styles.todoCheck}>
+                          {item.severity === 'high' ? (
+                            <AlertTriangle size={11} color="#d97706" />
+                          ) : (
+                            <Clock3 size={11} color="#7b817d" />
+                          )}
+                        </span>
+                        <div>
+                          <strong>{item.message}</strong>
+                          <span>{metaText}</span>
+                        </div>
+                        <ChevronRight size={12} className={styles.todoArrow} />
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            </div>
 
-            <Link className={styles.textAction} to="/nominees?new=1"><Plus size={12} /> Add nominee</Link>
-          </section>
-
-          {/* Calendar */}
-          <section className={`${styles.card} ${styles.calendarCard}`}>
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>PLAN AHEAD</span>
-                <h3>Legacy calendar</h3>
+              <div className={styles.cardFooterNote}>
+                <span>
+                  {loadingDashboard
+                    ? 'Loading items...'
+                    : attentionCount === 0
+                      ? '0 actions remaining'
+                      : `${attentionCount} action${attentionCount > 1 ? 's' : ''} remaining`}
+                </span>
+                <ListChecks size={12} />
               </div>
-              <CalendarDays size={15} className={styles.mutedIcon} />
-            </div>
+            </section>
 
-            <div className={styles.calendarToolbar}>
-              <strong>{monthNames[month]} {year}</strong>
-              <div>
-                <button onClick={() => changeMonth(-1)} aria-label="Previous month"><ChevronLeft size={13} /></button>
-                <button onClick={() => changeMonth(1)} aria-label="Next month"><ChevronRight size={13} /></button>
+            {/* Vault Categories */}
+            <section className={`${styles.card} ${styles.vaultCard}`}>
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>ORGANISE</span>
+                  <h3>Your vault</h3>
+                </div>
+                <span className={styles.countPill}>
+                  {loadingDashboard ? '--' : String(assets.total).padStart(2, '0')}
+                </span>
               </div>
-            </div>
 
-            <div className={styles.weekdays}>
-              {weekdayNames.map((day) => <span key={day}>{day}</span>)}
-            </div>
+              {loadingDashboard ? (
+                <div className={styles.emptyStateText}>Loading vault categories...</div>
+              ) : categoriesCount === 0 ? (
+                <div className={styles.emptyStateText}>
+                  No assets recorded yet.
+                  <br />
+                  <Link className={styles.emptyStateLink} to="/vault?new=asset">Add your first asset</Link>
+                </div>
+              ) : (
+                <div className={styles.categoryGrid}>
+                  {assets.byCategory.map(({ category, count }) => {
+                    const Icon = getCategoryIcon(category);
+                    return (
+                      <div className={styles.categoryRow} key={category}>
+                        <span className={styles.categoryIcon}><Icon size={12} strokeWidth={1.7} /></span>
+                        <span>{formatCategoryName(category)}</span>
+                        <strong>{String(count).padStart(2, '0')}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-            <div className={styles.calendarGrid}>
-              {calendar.map((day, index) => {
-                const hasEvent = day && month === now.getMonth() && year === now.getFullYear() && calendarEvents[day];
-                const isToday = day === now.getDate() && month === now.getMonth() && year === now.getFullYear();
-                const isSelected = day === selectedDay;
+              <Link className={styles.textAction} to="/vault">View all assets <ChevronRight size={12} /></Link>
+            </section>
 
-                return (
-                  <button
-                    key={`${day || 'empty'}-${index}`}
-                    className={`${styles.dayCell} ${!day ? styles.dayEmpty : ''} ${isToday ? styles.dayToday : ''} ${isSelected ? styles.daySelected : ''}`}
-                    disabled={!day}
-                    onClick={() => day && setSelectedDay(day)}
-                  >
-                    {day}
-                    {hasEvent && <i />}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className={styles.selectedEvent}>
-              <div className={styles.eventDot} />
-              <div>
-                <span>{selectedEvents[0]?.label || 'No scheduled review'}</span>
-                <small>{selectedEvents.length ? 'Scheduled legacy task' : 'Your calendar is clear'}</small>
+            {/* Vault Health */}
+            <section className={`${styles.card} ${styles.healthCard}`}>
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>STATUS</span>
+                  <h3>Vault health</h3>
+                </div>
+                <ShieldCheck size={15} className={styles.mutedIcon} />
               </div>
-            </div>
-          </section>
 
-          {/* Today */}
-          <section className={`${styles.card} ${styles.todayCard}`}>
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>ATTENTION</span>
-                <h3>Today</h3>
+              <div
+                className={styles.healthRing}
+                style={{
+                  background: loadingDashboard
+                    ? 'conic-gradient(#e7ebe8 100%, #e7ebe8 0)'
+                    : `conic-gradient(#738d79 ${readinessScore}%, #e7ebe8 0)`,
+                }}
+              >
+                <div>
+                  <strong>{loadingDashboard ? '--' : readinessScore}</strong>
+                  <span>%</span>
+                </div>
               </div>
-              <span className={styles.countPill}>03</span>
-            </div>
+              <span className={styles.healthLabel}>
+                {loadingDashboard ? 'Calculating...' : readiness.label || 'Getting Started'}
+              </span>
 
-            <div className={styles.todoList}>
-              {todayItems.map((item) => {
-                const target = item.meta === 'Nominees'
-                  ? '/nominees'
-                  : item.meta === 'Protection'
-                    ? '/vault'
-                    : '/documents';
-                return (
-                  <Link className={styles.todoRow} to={target} key={item.title}>
-                    <span className={styles.todoCheck}>{item.done ? <Check size={11} /> : ''}</span>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <span>{item.meta}</span>
+              <div className={styles.miniChecks}>
+                <span className={readiness.components?.verification ? '' : styles.pending}>
+                  <i /> Account secured
+                </span>
+                <span className={nominees.total > 0 ? '' : styles.pending}>
+                  <i /> Nominees added ({loadingDashboard ? '--' : nominees.total})
+                </span>
+                <span className={nominees.assigned > 0 ? '' : styles.pending}>
+                  <i /> Allocations set ({loadingDashboard ? '--' : nominees.assigned})
+                </span>
+              </div>
+            </section>
+
+            {/* Quick actions */}
+            <section className={`${styles.card} ${styles.quickCard}`}>
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>SHORTCUTS</span>
+                  <h3>Quick actions</h3>
+                </div>
+                <Plus size={15} className={styles.mutedIcon} />
+              </div>
+
+              <div className={styles.quickGrid}>
+                <Link to="/vault?new=asset"><span><WalletCards size={13} /></span>Add asset</Link>
+                <Link to="/nominees?new=1"><span><UsersRound size={13} /></span>Add nominee</Link>
+                <Link to="/documents?upload=1"><span><Upload size={13} /></span>Upload doc</Link>
+                <Link to="/calendar?new=1"><span><CalendarDays size={13} /></span>Add date</Link>
+              </div>
+            </section>
+
+            {/* Financial overview */}
+            <Link className={`${styles.card} ${styles.financeCard}`} to="/vault?category=financial">
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>OVERVIEW</span>
+                  <h3>Financial snapshot</h3>
+                </div>
+                <Landmark size={15} className={styles.mutedIcon} />
+              </div>
+
+              <div className={styles.financeMain}>
+                <div>
+                  <span>Total recorded value</span>
+                  {loadingDashboard ? (
+                    <strong>--</strong>
+                  ) : isMultiCurrency ? (
+                    <div className={styles.currencyPillRow}>
+                      {assets.totalValueByCurrency.map((item) => (
+                        <span key={item.currency} className={styles.currencyPill}>
+                          <small>{item.currency}</small>
+                          {formatCurrencyAmount(item.amount, item.currency)}
+                        </span>
+                      ))}
                     </div>
-                    <ChevronRight size={12} className={styles.todoArrow} />
-                  </Link>
-                );
-              })}
-            </div>
-
-            <div className={styles.cardFooterNote}>
-              <span>3 actions remaining</span>
-              <ListChecks size={12} />
-            </div>
-          </section>
-
-          {/* Vault */}
-          <section className={`${styles.card} ${styles.vaultCard}`}>
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>ORGANISE</span>
-                <h3>Your vault</h3>
-              </div>
-              <span className={styles.countPill}>24</span>
-            </div>
-
-            <div className={styles.categoryGrid}>
-              {categories.map(({ name, count, icon: Icon }) => (
-                <div className={styles.categoryRow} key={name}>
-                  <span className={styles.categoryIcon}><Icon size={12} strokeWidth={1.7} /></span>
-                  <span>{name}</span>
-                  <strong>{String(count).padStart(2, '0')}</strong>
+                  ) : (
+                    <strong>
+                      {formatCurrencyAmount(assets.totalValue || 0, singleCurrency)}
+                    </strong>
+                  )}
                 </div>
-              ))}
-            </div>
-
-            <Link className={styles.textAction} to="/vault">View all assets <ChevronRight size={12} /></Link>
-          </section>
-
-          {/* Vault Health */}
-          <section className={`${styles.card} ${styles.healthCard}`}>
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>STATUS</span>
-                <h3>Vault health</h3>
+                <button className={styles.eyeButton} onClick={(e) => { e.preventDefault(); }}>••••</button>
               </div>
-              <ShieldCheck size={15} className={styles.mutedIcon} />
-            </div>
 
-            <div className={styles.healthRing}>
-              <div>
-                <strong>68</strong>
-                <span>%</span>
+              {/* Dynamic category breakdowns if present */}
+              <div className={styles.financeBreakdown}>
+                {loadingDashboard ? (
+                  <div><span>Loading...</span><strong>--</strong></div>
+                ) : assets.byCategory?.length === 0 ? (
+                  <div><span>No assets</span><strong>0 recorded</strong></div>
+                ) : (
+                  assets.byCategory.slice(0, 3).map((cat) => (
+                    <div key={cat.category}>
+                      <span>{formatCategoryName(cat.category)}</span>
+                      <strong>{formatCurrencyAmount(cat.value || 0, singleCurrency)}</strong>
+                    </div>
+                  ))
+                )}
               </div>
-            </div>
-            <span className={styles.healthLabel}>Good progress</span>
 
-            <div className={styles.miniChecks}>
-              <span><i /> Account secured</span>
-              <span><i /> Nominees added</span>
-              <span className={styles.pending}><i /> Emergency plan</span>
-            </div>
-          </section>
-
-          {/* Quick actions */}
-          <section className={`${styles.card} ${styles.quickCard}`}>
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>SHORTCUTS</span>
-                <h3>Quick actions</h3>
+              <div className={styles.financeBar}>
+                {assets.byCategory && assets.byCategory.length > 0 ? (
+                  assets.byCategory.slice(0, 3).map((cat, idx) => {
+                    const totalCatVal = assets.byCategory.reduce((acc, c) => acc + (c.value || 0), 0);
+                    const pct = totalCatVal > 0 ? Math.max(10, Math.round((cat.value / totalCatVal) * 100)) : 33;
+                    return (
+                      <span
+                        key={cat.category || idx}
+                        style={{ width: `${pct}%` }}
+                      />
+                    );
+                  })
+                ) : (
+                  <span style={{ width: '100%', background: '#cbd4cd' }} />
+                )}
               </div>
-              <Plus size={15} className={styles.mutedIcon} />
-            </div>
+            </Link>
 
-            <div className={styles.quickGrid}>
-              <Link to="/vault?new=asset"><span><WalletCards size={13} /></span>Add asset</Link>
-              <Link to="/nominees?new=1"><span><UsersRound size={13} /></span>Add nominee</Link>
-              <Link to="/documents?upload=1"><span><Upload size={13} /></span>Upload doc</Link>
-              <Link to="/calendar?new=1"><span><CalendarDays size={13} /></span>Add date</Link>
-            </div>
-          </section>
-
-          {/* Financial overview */}
-          <Link className={`${styles.card} ${styles.financeCard}`} to="/vault?category=financial">
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>OVERVIEW</span>
-                <h3>Financial snapshot</h3>
+            {/* Activity */}
+            <Link className={`${styles.card} ${styles.activityCard}`} to="/activity">
+              <div className={styles.cardTop}>
+                <div>
+                  <span className={styles.cardKicker}>TIMELINE</span>
+                  <h3>Recent activity</h3>
+                </div>
+                <span className={styles.liveDot}>LIVE</span>
               </div>
-              <Landmark size={15} className={styles.mutedIcon} />
-            </div>
 
-            <div className={styles.financeMain}>
-              <div>
-                <span>Total recorded value</span>
-                <strong>₹12.4L</strong>
-              </div>
-              <button className={styles.eyeButton}>••••</button>
-            </div>
-            <div className={styles.financeBreakdown}>
-              <div><span>Financial</span><strong>₹6.2L</strong></div>
-              <div><span>Investments</span><strong>₹4.1L</strong></div>
-              <div><span>Property</span><strong>₹2.1L</strong></div>
-            </div>
-            <div className={styles.financeBar}>
-              <span style={{ width: '50%' }} />
-              <span style={{ width: '33%' }} />
-              <span style={{ width: '17%' }} />
-            </div>
-          </Link>
-
-          {/* Activity */}
-          <Link className={`${styles.card} ${styles.activityCard}`} to="/activity">
-            <div className={styles.cardTop}>
-              <div>
-                <span className={styles.cardKicker}>TIMELINE</span>
-                <h3>Recent activity</h3>
-              </div>
-              <span className={styles.liveDot}>LIVE</span>
-            </div>
-
-            <div className={styles.activityList}>
-              {activity.map(({ time, title, meta, icon: Icon }) => (
-                <div className={styles.activityRow} key={`${time}-${title}`}>
-                  <span className={styles.activityIcon}><Icon size={12} strokeWidth={1.7} /></span>
-                  <div>
-                    <strong>{title}</strong>
-                    <span>{meta}</span>
+              <div className={styles.activityList}>
+                {activity.map(({ time, title, meta, icon: Icon }) => (
+                  <div className={styles.activityRow} key={`${time}-${title}`}>
+                    <span className={styles.activityIcon}><Icon size={12} strokeWidth={1.7} /></span>
+                    <div>
+                      <strong>{title}</strong>
+                      <span>{meta}</span>
+                    </div>
+                    <time>{time}</time>
                   </div>
-                  <time>{time}</time>
-                </div>
-              ))}
-            </div>
-          </Link>
+                ))}
+              </div>
+            </Link>
 
-          {/* Smaller category cards */}
-          <Link to="/documents" className={`${styles.card} ${styles.smallInfoCard} ${styles.documentsCard}`}>
-            <div className={styles.cardTop}>
-              <div><span className={styles.cardKicker}>ARCHIVE</span><h3>Documents</h3></div>
-              <FileText size={14} className={styles.mutedIcon} />
-            </div>
-            <strong className={styles.bigSmallNumber}>12</strong>
-            <div className={styles.microRows}>
-              <span>Identity <b>04</b></span>
-              <span>Legal <b>02</b></span>
-              <span>Financial <b>03</b></span>
-            </div>
-          </Link>
+            {/* Smaller category cards */}
+            <Link to="/documents" className={`${styles.card} ${styles.smallInfoCard} ${styles.documentsCard}`}>
+              <div className={styles.cardTop}>
+                <div><span className={styles.cardKicker}>ARCHIVE</span><h3>Documents</h3></div>
+                <FileText size={14} className={styles.mutedIcon} />
+              </div>
+              <strong className={styles.bigSmallNumber}>
+                {loadingDashboard ? '--' : documents.total}
+              </strong>
+              <div className={styles.microRows}>
+                <span>Covered assets <b>{loadingDashboard ? '--' : String(documents.assetsWithDocuments).padStart(2, '0')}</b></span>
+                <span>Missing docs <b>{loadingDashboard ? '--' : String(documents.assetsWithoutDocuments).padStart(2, '0')}</b></span>
+                <span>Asset coverage <b>{loadingDashboard ? '--' : `${Math.round(documents.coveragePercentage)}%`}</b></span>
+              </div>
+            </Link>
 
-          <Link to="/vault?category=insurance" className={`${styles.card} ${styles.smallInfoCard} ${styles.protectionCard}`}>
-            <div className={styles.cardTop}>
-              <div><span className={styles.cardKicker}>PROTECTION</span><h3>Coverage</h3></div>
-              <ShieldCheck size={14} className={styles.mutedIcon} />
-            </div>
-            <strong className={styles.bigSmallNumber}>82<span>%</span></strong>
-            <div className={styles.thinProgress}><span style={{ width: '82%' }} /></div>
-            <span className={styles.smallMuted}>3 policies · 2 contacts</span>
-          </Link>
+            <Link to="/nominees" className={`${styles.card} ${styles.smallInfoCard} ${styles.protectionCard}`}>
+              <div className={styles.cardTop}>
+                <div><span className={styles.cardKicker}>PROTECTION</span><h3>Allocations</h3></div>
+                <ShieldCheck size={14} className={styles.mutedIcon} />
+              </div>
+              <strong className={styles.bigSmallNumber}>
+                {loadingDashboard ? '--' : `${Math.round(allocation.coveragePercentage)}`}{!loadingDashboard && <span>%</span>}
+              </strong>
+              <div className={styles.thinProgress}>
+                <span style={{ width: `${loadingDashboard ? 0 : Math.round(allocation.coveragePercentage)}%` }} />
+              </div>
+              <span className={styles.smallMuted}>
+                {loadingDashboard
+                  ? 'Loading...'
+                  : `${nominees.assigned} assigned · ${nominees.unassigned} unassigned`}
+              </span>
+            </Link>
 
-          <Link to="/vault?category=digital" className={`${styles.card} ${styles.smallInfoCard} ${styles.digitalCard}`}>
-            <div className={styles.cardTop}>
-              <div><span className={styles.cardKicker}>DIGITAL</span><h3>Online legacy</h3></div>
-              <KeyRound size={14} className={styles.mutedIcon} />
-            </div>
-            <strong className={styles.bigSmallNumber}>24</strong>
-            <div className={styles.microRows}>
-              <span>Accounts <b>14</b></span>
-              <span>Passwords <b>08</b></span>
-              <span>Domains <b>03</b></span>
-            </div>
-          </Link>
+            <Link to="/vault" className={`${styles.card} ${styles.smallInfoCard} ${styles.digitalCard}`}>
+              <div className={styles.cardTop}>
+                <div><span className={styles.cardKicker}>VAULT SUMMARY</span><h3>Coverage breakdown</h3></div>
+                <KeyRound size={14} className={styles.mutedIcon} />
+              </div>
+              <strong className={styles.bigSmallNumber}>
+                {loadingDashboard ? '--' : assets.total}
+              </strong>
+              <div className={styles.microRows}>
+                <span>Unallocated assets <b>{loadingDashboard ? '--' : String(nominees.assetsWithoutAllocation).padStart(2, '0')}</b></span>
+                <span>Documented <b>{loadingDashboard ? '--' : String(documents.assetsWithDocuments).padStart(2, '0')}</b></span>
+                <span>Categories <b>{loadingDashboard ? '--' : String(categoriesCount).padStart(2, '0')}</b></span>
+              </div>
+            </Link>
 
-          {/* Legacy readiness */}
-          <section className={`${styles.card} ${styles.readinessCard}`}>
-            <div>
-              <span className={styles.cardKicker}>NEXT STEP</span>
-              <h3>Legacy readiness</h3>
-              <p>You're building a complete handover for the people who matter.</p>
-            </div>
+            {/* Legacy readiness */}
+            <section className={`${styles.card} ${styles.readinessCard}`}>
+              <div>
+                <span className={styles.cardKicker}>NEXT STEP</span>
+                <h3>Legacy readiness</h3>
+                <p>You're building a complete handover for the people who matter.</p>
+              </div>
 
-            <div className={styles.readinessChecklist}>
-              <span><Check size={11} /> Account secured</span>
-              <span><Check size={11} /> Nominees assigned</span>
-              <span><Check size={11} /> Documents added</span>
-              <span className={styles.pendingItem}>○ Emergency instructions</span>
-              <span className={styles.pendingItem}>○ Will / legal documents</span>
-              <span className={styles.pendingItem}>○ Personal message</span>
-            </div>
+              <div className={styles.readinessChecklist}>
+                <span className={readiness.components?.verification ? '' : styles.pendingItem}>
+                  <Check size={11} /> Account secured
+                </span>
+                <span className={nominees.assigned > 0 ? '' : styles.pendingItem}>
+                  <Check size={11} /> Nominees assigned
+                </span>
+                <span className={documents.total > 0 ? '' : styles.pendingItem}>
+                  <Check size={11} /> Documents added
+                </span>
+                <span className={readinessScore >= 75 ? '' : styles.pendingItem}>
+                  <Check size={11} /> Allocation complete
+                </span>
+                <span className={readinessScore >= 90 ? '' : styles.pendingItem}>
+                  <Check size={11} /> All assets protected
+                </span>
+                <span className={styles.pendingItem}>
+                  ○ Emergency instructions
+                </span>
+              </div>
 
-            <Link className={styles.darkAction} to="/vault">Continue organising <ChevronRight size={12} /></Link>
-          </section>
-        </div>
+              <Link className={styles.darkAction} to="/vault">Continue organising <ChevronRight size={12} /></Link>
+            </section>
+          </div>
+        )}
 
         <div className={styles.pageFooter}>
           <span>DIGIVIRASAT · PRIVATE LEGACY WORKSPACE</span>
