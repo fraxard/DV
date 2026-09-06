@@ -1226,3 +1226,368 @@
   line-height: 1.5;
 }
 
+/* =========================================================
+   ACTIVITY & TASKS 2-COLUMN DESKTOP WORKSPACE
+   ========================================================= */
+.activityWorkspaceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .activityWorkspaceGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.activityColumn,
+.tasksColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(30, 35, 32, 0.08);
+  margin-bottom: 12px;
+}
+
+.columnTitle {
+  font-size: 12px;
+  font-weight: 650;
+  color: #171917;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.taskTabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0f3f0;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.taskTab {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #667169;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.taskTabActive {
+  background: #ffffff;
+  color: #171917;
+  box-shadow: 0 2px 5px rgba(30, 35, 32, 0.08);
+}
+
+.taskListContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.taskCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f8faf8;
+  border: 1px solid rgba(30, 35, 32, 0.07);
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.taskCard:hover {
+  background: #f1f5f2;
+  border-color: rgba(30, 35, 32, 0.14);
+}
+
+.taskCardCompleted {
+  opacity: 0.65;
+  background: #f4f6f4;
+}
+
+.taskCardMissed {
+  border-left: 3px solid #f59e0b;
+}
+
+.taskCheckbox {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(30, 35, 32, 0.25);
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: #ffffff;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.taskCheckboxChecked {
+  background: #15803d;
+  border-color: #15803d;
+}
+
+.taskBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.taskHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.taskName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #171917;
+}
+
+.taskCardCompleted .taskName {
+  text-decoration: line-through;
+  color: #7d847f;
+}
+
+.taskDueBadge {
+  font-size: 9px;
+  color: #555d57;
+  background: rgba(30, 35, 32, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.taskSubRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.taskAssetTag {
+  font-size: 8px;
+  font-weight: 600;
+  color: #1b4fd8;
+  background: #eff4ff;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.taskStatusTag {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.statusTag_scheduled {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.statusTag_completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.statusTag_missed {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.taskActionsRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.taskEmptyState {
+  text-align: center;
+  padding: 32px 16px;
+  font-size: 11px;
+  color: #8c938e;
+  background: #fafbfa;
+  border-radius: 10px;
+  border: 1px dashed rgba(30, 35, 32, 0.1);
+}
+
+/* =========================================================
+   RECENT ACTIVITY PAGINATION & STATES
+   ========================================================= */
+.paginationContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(30, 35, 32, 0.08);
+  flex-wrap: wrap;
+}
+
+.paginationInfo {
+  font-size: 11px;
+  color: #7a827c;
+  font-weight: 500;
+}
+
+.paginationDesktop {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.paginationMobile {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.paginationMobileText {
+  font-size: 11px;
+  color: #171917;
+  font-weight: 550;
+}
+
+.paginationBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(30, 35, 32, 0.12);
+  background: rgba(255, 255, 255, 0.85);
+  color: #272d29;
+  font-size: 11px;
+  font-weight: 550;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  min-height: 26px;
+  min-width: 26px;
+}
+
+.paginationBtn:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: rgba(30, 35, 32, 0.25);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.paginationBtn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.paginationBtnActive {
+  background: #202420 !important;
+  color: #ffffff !important;
+  border-color: #202420 !important;
+}
+
+.paginationEllipsis {
+  font-size: 11px;
+  color: #8c938e;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.activityLoadingState {
+  padding: 30px 0;
+  text-align: center;
+  font-size: 11px;
+  color: #8c938e;
+}
+
+.activityEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  text-align: center;
+  gap: 6px;
+  color: #7a827c;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px dashed rgba(30, 35, 32, 0.12);
+  border-radius: 10px;
+}
+
+.activityEmptyState strong {
+  font-size: 13px;
+  color: #171917;
+  font-weight: 600;
+}
+
+.activityEmptyState p {
+  margin: 0;
+  font-size: 11px;
+  color: #8c938e;
+}
+
+.activityErrorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  text-align: center;
+  gap: 10px;
+  background: rgba(254, 242, 242, 0.7);
+  border: 1px solid rgba(220, 38, 38, 0.16);
+  border-radius: 10px;
+  color: #991b1b;
+}
+
+.activityErrorText {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 550;
+}
+
+@media (max-width: 640px) {
+  .paginationDesktop {
+    display: none;
+  }
+  .paginationMobile {
+    display: flex;
+  }
+  .paginationContainer {
+    justify-content: center;
+    gap: 8px;
+  }
+  .paginationInfo {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+

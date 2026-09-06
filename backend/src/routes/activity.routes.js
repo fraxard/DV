@@ -1,14 +1,15 @@
 const router = require('express').Router();
 const { requireAuth } = require('../middleware/auth.middleware');
-const { listActivities } = require('../services/activity.service');
+const { listActivitiesPaginated } = require('../services/activity.service');
 
 // All activity routes require authentication
 router.use(requireAuth);
 
 router.get('/', async (req, res) => {
-  const limit = req.query.limit ? parseInt(req.query.limit, 10) : 20;
-  const activities = await listActivities(req.user.id, limit);
-  res.json({ activities });
+  const page = req.query.page !== undefined ? req.query.page : 1;
+  const limit = req.query.limit !== undefined ? req.query.limit : 5;
+  const { activities, pagination } = await listActivitiesPaginated(req.user.id, { page, limit });
+  res.json({ activities, pagination });
 });
 
 module.exports = router;

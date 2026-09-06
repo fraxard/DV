@@ -4,10 +4,13 @@ import {
   AlertTriangle, ArrowLeft, Briefcase, Building, CalendarDays, Check, ChevronRight,
   Coins, Download, FileCheck, FileText, FolderOpen, Globe, Landmark, Pencil,
   Percent, Plus, Search, Settings, ShieldCheck, Trash2, TrendingUp, Upload,
-  UploadCloud, UserCheck, UserPlus, UsersRound, WalletCards, X
+  UploadCloud, UserCheck, UserPlus, UsersRound, WalletCards, X, Clock, FolderPlus
 } from 'lucide-react';
 import styles from './WorkspacePage.module.css';
 import BottomNav from '../components/BottomNav';
+import TaskModal from '../components/tasks/TaskModal';
+import CategoryBuilderModal from '../components/CategoryBuilderModal';
+import { formatTaskDate, formatTaskTime, formatRelativeActivityDate } from '../components/tasks/taskUtils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -20,6 +23,29 @@ const formatCleanNumber = (val) => {
 const formatCleanPercent = (val) => {
   return `${formatCleanNumber(val)}%`;
 };
+
+function getPaginationItems(currentPage, totalPages) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const pages = [];
+  pages.push(1);
+  if (currentPage > 3) {
+    pages.push('...');
+  }
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  if (currentPage < totalPages - 2) {
+    pages.push('...');
+  }
+  if (totalPages > 1) {
+    pages.push(totalPages);
+  }
+  return pages;
+}
 
 const configs = {
   vault: {
@@ -159,9 +185,19 @@ const VAULT_CATEGORIES = {
   },
 };
 
-const getVaultCategoryMeta = (cat) => {
+const getVaultCategoryMeta = (cat, customCats = []) => {
   const key = (cat || 'other').toLowerCase().trim();
   if (VAULT_CATEGORIES[key]) return VAULT_CATEGORIES[key];
+  if (Array.isArray(customCats)) {
+    const custom = customCats.find((c) => c.key.toLowerCase() === key);
+    if (custom) {
+      return {
+        label: custom.name,
+        description: custom.description || 'Custom legacy category',
+        icon: FolderOpen,
+      };
+    }
+  }
   return {
     label: key.charAt(0).toUpperCase() + key.slice(1),
     description: 'Recorded legacy items and assets',
@@ -224,6 +260,11 @@ export default function WorkspacePage({ section }) {
   const [assets, setAssets] = useState([]);
   const [nominees, setNominees] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityLimit] = useState(5);
+  const [totalActivities, setTotalActivities] = useState(0);
+  const [totalActivityPages, setTotalActivityPages] = useState(0);
+  const [activityError, setActivityError] = useState('');
   const [loadingDocs, setLoadingDocs] = useState(section === 'documents');
   const [loadingAssets, setLoadingAssets] = useState(section === 'vault');
   const [loadingNominees, setLoadingNominees] = useState(section === 'nominees');
@@ -254,7 +295,26 @@ export default function WorkspacePage({ section }) {
     estimatedValue: '',
     currency: 'INR',
     valuationDate: '',
+    metadata: {},
   });
+
+  const resolveCategoryMeta = (cat) => getVaultCategoryMeta(cat, customCategories);
+
+  // Custom Categories & Category Builder modal state
+  const [customCategories, setCustomCategories] = useState([]);
+  const [isCategoryBuilderOpen, setIsCategoryBuilderOpen] = useState(false);
+  const [editingCustomCategory, setEditingCustomCategory] = useState(null);
+  const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
+
+  // Activity Tasks State
+  const [tasks, setTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(section === 'activity');
+  const [activeTaskTab, setActiveTaskTab] = useState('upcoming'); // 'upcoming', 'completed', 'missed'
+  const [taskPage, setTaskPage] = useState(1);
+  const [taskLimit] = useState(5);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
 
   // Delete Asset confirmation modal state
   const [assetToDelete, setAssetToDelete] = useState(null);
@@ -404,22 +464,68 @@ export default function WorkspacePage({ section }) {
     }
   };
 
-  const fetchActivities = async () => {
+  const fetchActivities = async (page = activityPage) => {
     try {
       setLoadingActivities(true);
-      const res = await fetch(`${API_URL}/activity`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setActivities(data.activities || []);
+      setActivityError('');
+      const res = await fetch(`${API_URL}/activity?page=${page}&limit=${activityLimit}`, { credentials: 'include' });
+      if (!res.ok) {
+        throw new Error('Failed to load activities');
+      }
+      const data = await res.json();
+      setActivities(data.activities || []);
+      if (data.pagination) {
+        setActivityPage(data.pagination.page);
+        setTotalActivities(data.pagination.total || 0);
+        setTotalActivityPages(data.pagination.totalPages || 0);
+      } else {
+        setActivityPage(page);
+        const total = (data.activities || []).length;
+        setTotalActivities(total);
+        setTotalActivityPages(Math.ceil(total / activityLimit) || (total > 0 ? 1 : 0));
       }
     } catch (err) {
       console.error('Failed to load activities:', err);
+      setActivityError('Unable to load activity.');
     } finally {
       setLoadingActivities(false);
     }
   };
 
+  const handleActivityPageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalActivityPages || newPage === activityPage) return;
+    fetchActivities(newPage);
+  };
+
+  const fetchCustomCategories = async () => {
+    try {
+      const res = await fetch(`${API_URL}/custom-categories`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCustomCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error('Failed to load custom categories:', err);
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      setLoadingTasks(true);
+      const res = await fetch(`${API_URL}/tasks`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setTasks(data.tasks || []);
+      }
+    } catch (err) {
+      console.error('Failed to load tasks:', err);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
   useEffect(() => {
+    fetchCustomCategories();
     if (isDocSection) {
       fetchDocuments();
       fetchAssets();
@@ -431,9 +537,109 @@ export default function WorkspacePage({ section }) {
       fetchNominees();
       fetchAssets();
     } else if (section === 'activity') {
-      fetchActivities();
+      fetchActivities(1);
+      fetchTasks();
+      fetchAssets();
     }
   }, [section]);
+
+  // -------------------------------------------------------------
+  // CUSTOM CATEGORY HANDLERS
+  // -------------------------------------------------------------
+  const handleSaveCustomCategory = async (catData, existingId = null) => {
+    try {
+      setIsSubmittingCategory(true);
+      const url = existingId ? `${API_URL}/custom-categories/${existingId}` : `${API_URL}/custom-categories`;
+      const method = existingId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(catData),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error?.message || 'Failed to save custom category.');
+      }
+
+      await fetchCustomCategories();
+      // If newly created, set this category on the active asset form
+      if (!existingId && data.category) {
+        setAssetFormData((prev) => ({
+          ...prev,
+          category: data.category.key,
+        }));
+      }
+      setIsCategoryBuilderOpen(false);
+      setEditingCustomCategory(null);
+    } finally {
+      setIsSubmittingCategory(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // TASK HANDLERS
+  // -------------------------------------------------------------
+  const handleToggleTaskStatus = async (taskId, nextStatus) => {
+    try {
+      const res = await fetch(`${API_URL}/tasks/${taskId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        await fetchTasks();
+        await fetchActivities(1);
+      }
+    } catch (err) {
+      console.error('Failed to update task status:', err);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const res = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        await fetchTasks();
+        await fetchActivities(1);
+      }
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
+  };
+
+  const handleSaveTask = async (taskData, existingTaskId = null) => {
+    try {
+      setIsSubmittingTask(true);
+      const url = existingTaskId ? `${API_URL}/tasks/${existingTaskId}` : `${API_URL}/tasks`;
+      const method = existingTaskId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(taskData),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error?.message || 'Failed to save task.');
+      }
+
+      await fetchTasks();
+      await fetchActivities(1);
+      setIsTaskModalOpen(false);
+      setEditingTask(null);
+    } finally {
+      setIsSubmittingTask(false);
+    }
+  };
 
   // -------------------------------------------------------------
   // NOMINEE HANDLERS
@@ -729,6 +935,7 @@ export default function WorkspacePage({ section }) {
       estimatedValue: '',
       currency: 'INR',
       valuationDate: '',
+      metadata: { customFields: {} },
     });
     setIsAddAssetOpen(true);
   };
@@ -744,6 +951,7 @@ export default function WorkspacePage({ section }) {
       estimatedValue: asset.estimated_value !== null && asset.estimated_value !== undefined ? asset.estimated_value : '',
       currency: asset.currency || 'INR',
       valuationDate: asset.valuation_date || '',
+      metadata: asset.metadata || { customFields: {} },
     });
     setIsAddAssetOpen(true);
   };
@@ -779,6 +987,7 @@ export default function WorkspacePage({ section }) {
         subcategory: assetFormData.subcategory.trim() || null,
         description: assetFormData.description.trim() || null,
         currency: assetFormData.currency || 'INR',
+        metadata: assetFormData.metadata || {},
       };
 
       if (assetFormData.estimatedValue !== '') {
@@ -1095,7 +1304,7 @@ export default function WorkspacePage({ section }) {
       ]
     : section === 'activity'
     ? [
-        [String(activities.length).padStart(2, '0'), 'recent events'],
+        [String(totalActivities || activities.length).padStart(2, '0'), 'recent events'],
         [activities[0]?.relative_time || 'Recent', 'last activity'],
         ['Protected', 'audit trail'],
       ]
@@ -1243,9 +1452,12 @@ export default function WorkspacePage({ section }) {
                   </button>
                 </div>
               ) : (() => {
-                // Compute available categories from user's actual assets
+                // Compute available categories from user's assets and custom categories
                 const availableCategories = Array.from(
-                  new Set(assets.map((a) => (a.category || 'other').toLowerCase().trim()))
+                  new Set([
+                    ...assets.map((a) => (a.category || 'other').toLowerCase().trim()),
+                    ...customCategories.map((c) => c.key.toLowerCase().trim()),
+                  ])
                 );
 
                 // Filter by search and selectedCategory
@@ -1292,7 +1504,7 @@ export default function WorkspacePage({ section }) {
                           All ({assets.length})
                         </button>
                         {availableCategories.map((catKey) => {
-                          const catMeta = getVaultCategoryMeta(catKey);
+                          const catMeta = resolveCategoryMeta(catKey);
                           const count = assets.filter((a) => (a.category || 'other').toLowerCase().trim() === catKey).length;
                           return (
                             <button
@@ -1325,7 +1537,7 @@ export default function WorkspacePage({ section }) {
                     ) : (
                       <div className={styles.vaultCategoryGrid}>
                         {Object.entries(groupedAssets).map(([catKey, catAssets]) => {
-                          const catMeta = getVaultCategoryMeta(catKey);
+                          const catMeta = resolveCategoryMeta(catKey);
                           const CatIcon = catMeta.icon;
                           const catTotal = formatCategoryValuation(catAssets);
 
@@ -1508,44 +1720,386 @@ export default function WorkspacePage({ section }) {
                 ))
               )
             ) : section === 'activity' ? (
-              loadingActivities ? (
-                <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
-                  Loading activity timeline...
-                </div>
-              ) : activities.length === 0 ? (
-                <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
-                  No recent activity recorded yet. Changes made to assets, nominees, documents, and allocations will appear here.
-                </div>
-              ) : (
-                activities.map((act) => {
-                  const ActIcon = act.category === 'nominees'
-                    ? UsersRound
-                    : act.category === 'documents'
-                      ? FileText
-                      : act.category === 'allocations'
-                        ? Percent
-                        : act.category === 'financial'
-                          ? Landmark
-                          : act.category === 'crypto'
-                            ? Coins
-                            : act.category === 'digital'
-                              ? Globe
-                              : act.category === 'insurance'
-                                ? ShieldCheck
-                                : FolderOpen;
-
-                  return (
-                    <div className={styles.row} key={act.id}>
-                      <div className={styles.rowIcon}><ActIcon size={14} /></div>
-                      <div className={styles.rowMain}>
-                        <strong>{act.title}</strong>
-                        <span>{act.category_label || act.category} · {act.relative_time || new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <span className={styles.status}>Recorded</span>
+              <div className={styles.activityWorkspaceGrid}>
+                {/* Left Column: Recent Activity Timeline */}
+                <div className={styles.activityColumn}>
+                  <div className={styles.columnHeader}>
+                    <div className={styles.columnTitle}>
+                      <Clock size={14} />
+                      <span>Timeline Activity</span>
                     </div>
-                  );
-                })
-              )
+                    <span style={{ fontSize: '10px', color: '#8c938e' }}>
+                      {totalActivities} recorded
+                    </span>
+                  </div>
+
+                  {activityError ? (
+                    <div className={styles.activityErrorState}>
+                      <AlertTriangle size={18} color="#dc2626" />
+                      <p className={styles.activityErrorText}>Unable to load activity.</p>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={() => fetchActivities(activityPage)}
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  ) : loadingActivities ? (
+                    <div className={styles.activityLoadingState}>
+                      Loading activity timeline...
+                    </div>
+                  ) : totalActivities === 0 || activities.length === 0 ? (
+                    <div className={styles.activityEmptyState}>
+                      <strong>No activity yet.</strong>
+                      <p>Changes to your vault will appear here.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {activities.map((act) => {
+                          const ActIcon = act.category === 'tasks'
+                            ? CalendarDays
+                            : act.category === 'nominees'
+                            ? UsersRound
+                            : act.category === 'documents'
+                              ? FileText
+                              : act.category === 'allocations'
+                                ? Percent
+                                : act.category === 'financial'
+                                  ? Landmark
+                                  : act.category === 'crypto'
+                                    ? Coins
+                                    : act.category === 'digital'
+                                      ? Globe
+                                      : act.category === 'insurance'
+                                        ? ShieldCheck
+                                        : FolderOpen;
+
+                          return (
+                            <div className={styles.row} key={act.id}>
+                              <div className={styles.rowIcon}><ActIcon size={14} /></div>
+                              <div className={styles.rowMain}>
+                                <strong>{act.title}</strong>
+                                <span>{act.category_label || act.category} · {formatRelativeActivityDate(act.created_at || act.createdAt)}</span>
+                              </div>
+                              <span className={styles.status}>Recorded</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {totalActivityPages > 1 && (
+                        <div className={styles.paginationContainer}>
+                          <span className={styles.paginationInfo}>
+                            Showing {(activityPage - 1) * activityLimit + 1}–{Math.min(totalActivities, activityPage * activityLimit)} of {totalActivities}
+                          </span>
+
+                          {/* Desktop Pagination */}
+                          <div className={styles.paginationDesktop}>
+                            <button
+                              type="button"
+                              className={styles.paginationBtn}
+                              disabled={activityPage <= 1 || loadingActivities}
+                              onClick={() => handleActivityPageChange(activityPage - 1)}
+                            >
+                              ← Previous
+                            </button>
+
+                            {getPaginationItems(activityPage, totalActivityPages).map((item, idx) => {
+                              if (item === '...') {
+                                return (
+                                  <span key={`ellipsis-${idx}`} className={styles.paginationEllipsis}>
+                                    …
+                                  </span>
+                                );
+                              }
+                              return (
+                                <button
+                                  key={`page-${item}`}
+                                  type="button"
+                                  className={`${styles.paginationBtn} ${activityPage === item ? styles.paginationBtnActive : ''}`}
+                                  disabled={loadingActivities}
+                                  onClick={() => handleActivityPageChange(item)}
+                                >
+                                  {item}
+                                </button>
+                              );
+                            })}
+
+                            <button
+                              type="button"
+                              className={styles.paginationBtn}
+                              disabled={activityPage >= totalActivityPages || loadingActivities}
+                              onClick={() => handleActivityPageChange(activityPage + 1)}
+                            >
+                              Next →
+                            </button>
+                          </div>
+
+                          {/* Mobile Pagination */}
+                          <div className={styles.paginationMobile}>
+                            <button
+                              type="button"
+                              className={styles.paginationBtn}
+                              disabled={activityPage <= 1 || loadingActivities}
+                              onClick={() => handleActivityPageChange(activityPage - 1)}
+                              aria-label="Previous Page"
+                            >
+                              ←
+                            </button>
+                            <span className={styles.paginationMobileText}>
+                              Page {activityPage} of {totalActivityPages}
+                            </span>
+                            <button
+                              type="button"
+                              className={styles.paginationBtn}
+                              disabled={activityPage >= totalActivityPages || loadingActivities}
+                              onClick={() => handleActivityPageChange(activityPage + 1)}
+                              aria-label="Next Page"
+                            >
+                              →
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Right Column: Tasks & Deadlines Workspace */}
+                <div className={styles.tasksColumn}>
+                  <div className={styles.columnHeader}>
+                    <div className={styles.columnTitle}>
+                      <CalendarDays size={14} />
+                      <span>Tasks & Deadlines</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.actionBtn}
+                      style={{ padding: '4px 10px', fontSize: '10px' }}
+                      onClick={() => {
+                        setEditingTask(null);
+                        setIsTaskModalOpen(true);
+                      }}
+                    >
+                      <Plus size={11} /> Add Task
+                    </button>
+                  </div>
+
+                  <div className={styles.taskTabs} style={{ marginBottom: '12px' }}>
+                    <button
+                      type="button"
+                      className={`${styles.taskTab} ${activeTaskTab === 'upcoming' ? styles.taskTabActive : ''}`}
+                      onClick={() => {
+                        setActiveTaskTab('upcoming');
+                        setTaskPage(1);
+                      }}
+                    >
+                      Upcoming ({tasks.filter((t) => t.status === 'scheduled').length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.taskTab} ${activeTaskTab === 'completed' ? styles.taskTabActive : ''}`}
+                      onClick={() => {
+                        setActiveTaskTab('completed');
+                        setTaskPage(1);
+                      }}
+                    >
+                      Completed ({tasks.filter((t) => t.status === 'completed').length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.taskTab} ${activeTaskTab === 'missed' ? styles.taskTabActive : ''}`}
+                      onClick={() => {
+                        setActiveTaskTab('missed');
+                        setTaskPage(1);
+                      }}
+                    >
+                      Missed ({tasks.filter((t) => t.status === 'missed').length})
+                    </button>
+                  </div>
+
+                  {loadingTasks ? (
+                    <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
+                      Loading tasks...
+                    </div>
+                  ) : (() => {
+                    const filteredTasks = tasks.filter((t) => {
+                      if (activeTaskTab === 'upcoming') return t.status === 'scheduled';
+                      if (activeTaskTab === 'completed') return t.status === 'completed';
+                      if (activeTaskTab === 'missed') return t.status === 'missed';
+                      return true;
+                    });
+
+                    if (filteredTasks.length === 0) {
+                      return (
+                        <div className={styles.taskEmptyState}>
+                          {activeTaskTab === 'upcoming' && 'No upcoming tasks scheduled.'}
+                          {activeTaskTab === 'completed' && 'No tasks completed yet.'}
+                          {activeTaskTab === 'missed' && 'No missed tasks. All deadlines are clear!'}
+                        </div>
+                      );
+                    }
+
+                    const totalTaskCount = filteredTasks.length;
+                    const totalTaskPages = Math.ceil(totalTaskCount / taskLimit) || 1;
+                    const safeTaskPage = Math.min(Math.max(1, taskPage), totalTaskPages);
+                    const paginatedTasks = filteredTasks.slice((safeTaskPage - 1) * taskLimit, safeTaskPage * taskLimit);
+
+                    return (
+                      <>
+                        <div className={styles.taskListContainer}>
+                          {paginatedTasks.map((t) => {
+                            const isDone = t.status === 'completed';
+                            const isMissed = t.status === 'missed';
+
+                            return (
+                              <div
+                                key={t.id}
+                                className={`${styles.taskCard} ${isDone ? styles.taskCardCompleted : ''} ${isMissed ? styles.taskCardMissed : ''}`}
+                              >
+                                <button
+                                  type="button"
+                                  className={`${styles.taskCheckbox} ${isDone ? styles.taskCheckboxChecked : ''}`}
+                                  onClick={() => handleToggleTaskStatus(t.id, isDone ? 'scheduled' : 'completed')}
+                                  title={isDone ? 'Mark as incomplete' : 'Mark as complete'}
+                                >
+                                  {isDone && <Check size={11} strokeWidth={3} />}
+                                </button>
+
+                                <div className={styles.taskBody}>
+                                  <div className={styles.taskHeaderRow}>
+                                    <span className={styles.taskName}>{t.title}</span>
+                                    <span className={styles.taskDueBadge}>
+                                      <CalendarDays size={10} />
+                                      {formatTaskDate(t.due_date || t.dueDate)}
+                                      {(t.due_time || t.dueTime) ? ` · ${formatTaskTime(t.due_time || t.dueTime)}` : ''}
+                                    </span>
+                                  </div>
+
+                                  <div className={styles.taskSubRow}>
+                                    {(t.asset_name || t.assetName) && (
+                                      <span className={styles.taskAssetTag}>
+                                        Asset: {t.asset_name || t.assetName}
+                                      </span>
+                                    )}
+                                    <span className={`${styles.taskStatusTag} ${styles['statusTag_' + t.status]}`}>
+                                      {t.status}
+                                    </span>
+                                  </div>
+
+                                  {t.description && (
+                                    <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#667169' }}>
+                                      {t.description}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className={styles.taskActionsRow}>
+                                  <button
+                                    type="button"
+                                    className={styles.iconActionBtn}
+                                    onClick={() => {
+                                      setEditingTask(t);
+                                      setIsTaskModalOpen(true);
+                                    }}
+                                    title="Edit task"
+                                  >
+                                    <Pencil size={11} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.iconActionBtn}
+                                    onClick={() => handleDeleteTask(t.id)}
+                                    title="Delete task"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {totalTaskPages > 1 && (
+                          <div className={styles.paginationContainer}>
+                            <span className={styles.paginationInfo}>
+                              Showing {(safeTaskPage - 1) * taskLimit + 1}–{Math.min(totalTaskCount, safeTaskPage * taskLimit)} of {totalTaskCount}
+                            </span>
+
+                            {/* Desktop Pagination */}
+                            <div className={styles.paginationDesktop}>
+                              <button
+                                type="button"
+                                className={styles.paginationBtn}
+                                disabled={safeTaskPage <= 1}
+                                onClick={() => setTaskPage(safeTaskPage - 1)}
+                              >
+                                ← Previous
+                              </button>
+
+                              {getPaginationItems(safeTaskPage, totalTaskPages).map((item, idx) => {
+                                if (item === '...') {
+                                  return (
+                                    <span key={`task-ellipsis-${idx}`} className={styles.paginationEllipsis}>
+                                      …
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <button
+                                    key={`task-page-${item}`}
+                                    type="button"
+                                    className={`${styles.paginationBtn} ${safeTaskPage === item ? styles.paginationBtnActive : ''}`}
+                                    onClick={() => setTaskPage(item)}
+                                  >
+                                    {item}
+                                  </button>
+                                );
+                              })}
+
+                              <button
+                                type="button"
+                                className={styles.paginationBtn}
+                                disabled={safeTaskPage >= totalTaskPages}
+                                onClick={() => setTaskPage(safeTaskPage + 1)}
+                              >
+                                Next →
+                              </button>
+                            </div>
+
+                            {/* Mobile Pagination */}
+                            <div className={styles.paginationMobile}>
+                              <button
+                                type="button"
+                                className={styles.paginationBtn}
+                                disabled={safeTaskPage <= 1}
+                                onClick={() => setTaskPage(safeTaskPage - 1)}
+                                aria-label="Previous Page"
+                              >
+                                ←
+                              </button>
+                              <span className={styles.paginationMobileText}>
+                                Page {safeTaskPage} of {totalTaskPages}
+                              </span>
+                              <button
+                                type="button"
+                                className={styles.paginationBtn}
+                                disabled={safeTaskPage >= totalTaskPages}
+                                onClick={() => setTaskPage(safeTaskPage + 1)}
+                                aria-label="Next Page"
+                              >
+                                →
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
             ) : (
               config.rows.map(([title, meta, status]) => (
                 <div className={styles.row} key={`${title}-${meta}`}>
@@ -1890,13 +2444,36 @@ export default function WorkspacePage({ section }) {
                     <select
                       className={styles.formInput}
                       value={assetFormData.category}
-                      onChange={(e) => setAssetFormData({ ...assetFormData, category: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__CREATE_CUSTOM__') {
+                          setIsCategoryBuilderOpen(true);
+                          return;
+                        }
+                        setAssetFormData({ ...assetFormData, category: val });
+                      }}
                       required
                     >
-                      <option value="financial">Financial</option>
-                      <option value="property">Property</option>
-                      <option value="insurance">Insurance</option>
-                      <option value="digital">Digital / Crypto</option>
+                      <optgroup label="Standard Categories">
+                        <option value="financial">Financial</option>
+                        <option value="property">Property</option>
+                        <option value="insurance">Insurance</option>
+                        <option value="digital">Digital / Crypto</option>
+                        <option value="legal">Legal</option>
+                        <option value="business">Business</option>
+                        <option value="investments">Investments</option>
+                        <option value="other">Other Assets</option>
+                      </optgroup>
+                      {customCategories.length > 0 && (
+                        <optgroup label="Custom Categories">
+                          {customCategories.map((c) => (
+                            <option key={c.id} value={c.key}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      <option value="__CREATE_CUSTOM__">+ Create Custom Category...</option>
                     </select>
                   </div>
 
@@ -1947,6 +2524,88 @@ export default function WorkspacePage({ section }) {
                     onChange={(e) => setAssetFormData({ ...assetFormData, description: e.target.value })}
                   />
                 </div>
+
+                {(() => {
+                  const selectedCustomCat = customCategories.find((c) => c.key === assetFormData.category);
+                  if (!selectedCustomCat || !selectedCustomCat.fields || selectedCustomCat.fields.length === 0) return null;
+
+                  return (
+                    <div style={{ marginTop: '4px', paddingTop: '10px', borderTop: '1px dashed rgba(30, 35, 32, 0.12)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 650, color: '#1b4fd8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {selectedCustomCat.name} Details
+                      </div>
+                      {selectedCustomCat.fields.map((f) => {
+                        const val = assetFormData.metadata?.customFields?.[f.key] ?? (assetFormData.metadata?.[f.key] ?? '');
+                        const updateField = (newVal) => {
+                          setAssetFormData((prev) => ({
+                            ...prev,
+                            metadata: {
+                              ...prev.metadata,
+                              [f.key]: newVal,
+                              customFields: {
+                                ...(prev.metadata?.customFields || {}),
+                                [f.key]: newVal,
+                              },
+                            },
+                          }));
+                        };
+
+                        if (f.data_type === 'boolean') {
+                          return (
+                            <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+                              <input
+                                type="checkbox"
+                                id={`cf-${f.key}`}
+                                checked={Boolean(val)}
+                                onChange={(e) => updateField(e.target.checked)}
+                                style={{ width: '15px', height: '15px', cursor: 'pointer' }}
+                              />
+                              <label htmlFor={`cf-${f.key}`} style={{ fontSize: '11px', fontWeight: 500, cursor: 'pointer', color: '#171917', textTransform: 'none' }}>
+                                {f.label} {f.is_required && <span style={{ color: '#dc2626' }}>*</span>}
+                              </label>
+                            </div>
+                          );
+                        }
+
+                        if (f.data_type === 'textarea') {
+                          return (
+                            <div className={styles.formGroup} key={f.key}>
+                              <label>
+                                {f.label} {f.is_required && <span style={{ color: '#dc2626' }}>*</span>}
+                              </label>
+                              <textarea
+                                className={styles.formInput}
+                                rows={2}
+                                value={val}
+                                onChange={(e) => updateField(e.target.value)}
+                                required={Boolean(f.is_required)}
+                                placeholder={`Enter ${f.label.toLowerCase()}...`}
+                              />
+                            </div>
+                          );
+                        }
+
+                        const inputType = f.data_type === 'number' ? 'number' : f.data_type === 'date' ? 'date' : f.data_type === 'url' ? 'url' : 'text';
+
+                        return (
+                          <div className={styles.formGroup} key={f.key}>
+                            <label>
+                              {f.label} {f.is_required && <span style={{ color: '#dc2626' }}>*</span>}
+                            </label>
+                            <input
+                              type={inputType}
+                              className={styles.formInput}
+                              value={val}
+                              onChange={(e) => updateField(e.target.value)}
+                              required={Boolean(f.is_required)}
+                              placeholder={`Enter ${f.label.toLowerCase()}...`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 <div className={styles.modalActions}>
                   <button
@@ -2450,7 +3109,7 @@ export default function WorkspacePage({ section }) {
             CATEGORY EXPLORER MODAL
             ========================================================= */}
         {activeCategoryModal && (() => {
-          const catMeta = getVaultCategoryMeta(activeCategoryModal);
+          const catMeta = resolveCategoryMeta(activeCategoryModal);
           const CatIcon = catMeta.icon;
           const catAssets = assets.filter(
             (a) => (a.category || 'other').toLowerCase().trim() === activeCategoryModal
@@ -2557,6 +3216,30 @@ export default function WorkspacePage({ section }) {
             </div>
           );
         })()}
+        {/* Category Builder Modal */}
+        <CategoryBuilderModal
+          isOpen={isCategoryBuilderOpen}
+          category={editingCustomCategory}
+          onClose={() => {
+            setIsCategoryBuilderOpen(false);
+            setEditingCustomCategory(null);
+          }}
+          onSave={handleSaveCustomCategory}
+          isSubmitting={isSubmittingCategory}
+        />
+
+        {/* Task Create / Edit Modal */}
+        <TaskModal
+          isOpen={isTaskModalOpen}
+          initialTask={editingTask}
+          assets={assets}
+          onClose={() => {
+            setIsTaskModalOpen(false);
+            setEditingTask(null);
+          }}
+          onSave={handleSaveTask}
+          isSubmitting={isSubmittingTask}
+        />
       </main>
 
       <BottomNav />

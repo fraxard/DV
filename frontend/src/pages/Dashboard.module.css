@@ -615,7 +615,19 @@
   height: 3px;
   transform: translateX(-50%);
   border-radius: 50%;
-  background: #6f8d77;
+  background: #1b4fd8;
+}
+
+.dayCell .dot_completed {
+  background: #15803d;
+}
+
+.dayCell .dot_missed {
+  background: #f59e0b;
+}
+
+.dayCell .dot_scheduled {
+  background: #1b4fd8;
 }
 
 .selectedEvent {

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
 import BottomNav from '../components/BottomNav';
+import DayTaskModal from '../components/tasks/DayTaskModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -97,13 +98,6 @@ const activity = [
   { time: '31 Aug', title: 'Bank account added', meta: 'Financial', icon: Landmark },
 ];
 
-const calendarEvents = {
-  5: [{ label: 'Review nominees', type: 'review' }],
-  10: [{ label: 'Insurance renewal', type: 'renewal' }],
-  17: [{ label: 'Document review', type: 'review' }],
-  24: [{ label: 'Legacy check-in', type: 'legacy' }],
-};
-
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -146,6 +140,12 @@ const Dashboard = () => {
   });
   const [loadingNominees, setLoadingNominees] = useState(true);
 
+  // Persistent Tasks State
+  const [tasks, setTasks] = useState([]);
+  const [vaultAssets, setVaultAssets] = useState([]);
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
+  const [dayModalDate, setDayModalDate] = useState('');
+
   const fetchDashboard = useCallback(async () => {
     try {
       setLoadingDashboard(true);
@@ -183,10 +183,108 @@ const Dashboard = () => {
     }
   }, []);
 
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+
+  const fetchTasksForMonth = useCallback(async (targetYear, targetMonth) => {
+    try {
+      const daysInM = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const startDate = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`;
+      const endDate = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(daysInM).padStart(2, '0')}`;
+
+      const res = await fetch(`${API_URL}/tasks?startDate=${startDate}&endDate=${endDate}`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTasks(data.tasks || []);
+      }
+    } catch (err) {
+      console.error('Failed to load tasks for calendar:', err);
+    }
+  }, []);
+
+  const fetchVaultAssets = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/vault/assets`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setVaultAssets(data.assets || []);
+      }
+    } catch (err) {
+      console.error('Failed to load assets for tasks:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchDashboard();
     fetchDashboardNominees();
-  }, [fetchDashboard, fetchDashboardNominees]);
+    fetchVaultAssets();
+  }, [fetchDashboard, fetchDashboardNominees, fetchVaultAssets]);
+
+  useEffect(() => {
+    fetchTasksForMonth(year, month);
+  }, [year, month, fetchTasksForMonth]);
+
+  const handleOpenDayModal = (dayNumber) => {
+    const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
+    setSelectedDay(dayNumber);
+    setDayModalDate(formattedDate);
+    setIsDayModalOpen(true);
+  };
+
+  const handleToggleTaskStatus = async (taskId, nextStatus) => {
+    try {
+      const res = await fetch(`${API_URL}/tasks/${taskId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        await fetchTasksForMonth(year, month);
+        fetchDashboard(); // Refresh recent activity if logged
+      }
+    } catch (err) {
+      console.error('Failed to update task status:', err);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const res = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        await fetchTasksForMonth(year, month);
+        fetchDashboard();
+      }
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
+  };
+
+  const handleSaveTask = async (taskData, existingTaskId = null) => {
+    const url = existingTaskId ? `${API_URL}/tasks/${existingTaskId}` : `${API_URL}/tasks`;
+    const method = existingTaskId ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(taskData),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson?.error?.message || 'Failed to save task.');
+    }
+
+    await fetchTasksForMonth(year, month);
+    fetchDashboard();
+  };
+
   const location = useLocation();
   const activeNav = location.pathname === '/dashboard' ? 'Home'
     : location.pathname.startsWith('/vault') ? 'Vault'
@@ -196,14 +294,20 @@ const Dashboard = () => {
             : location.pathname.startsWith('/settings') ? 'Settings'
               : 'Home';
 
-  const year = calendarDate.getFullYear();
-  const month = calendarDate.getMonth();
   const calendar = useMemo(() => buildCalendar(year, month), [year, month]);
 
-  const selectedEvents =
-    month === now.getMonth() && year === now.getFullYear()
-      ? calendarEvents[selectedDay] || []
-      : [];
+  // Tasks mapped by date string
+  const tasksByDay = useMemo(() => {
+    const map = {};
+    for (const t of tasks) {
+      if (!map[t.dueDate]) map[t.dueDate] = [];
+      map[t.dueDate].push(t);
+    }
+    return map;
+  }, [tasks]);
+
+  const selectedDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
+  const selectedEvents = tasksByDay[selectedDateStr] || [];
 
   const changeMonth = (delta) => {
     setCalendarDate(new Date(year, month + delta, 1));
@@ -441,29 +545,57 @@ const Dashboard = () => {
 
               <div className={styles.calendarGrid}>
                 {calendar.map((day, index) => {
-                  const hasEvent = day && month === now.getMonth() && year === now.getFullYear() && calendarEvents[day];
+                  const dateKey = day ? `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : null;
+                  const dayEvents = dateKey ? tasksByDay[dateKey] || [] : [];
                   const isToday = day === now.getDate() && month === now.getMonth() && year === now.getFullYear();
                   const isSelected = day === selectedDay;
+
+                  // Determine dominant or top dot status
+                  const hasCompleted = dayEvents.some((t) => t.status === 'completed');
+                  const hasMissed = dayEvents.some((t) => t.status === 'missed');
+                  const hasScheduled = dayEvents.some((t) => t.status === 'scheduled');
+                  const dotStatus = hasMissed ? 'missed' : hasScheduled ? 'scheduled' : hasCompleted ? 'completed' : null;
 
                   return (
                     <button
                       key={`${day || 'empty'}-${index}`}
                       className={`${styles.dayCell} ${!day ? styles.dayEmpty : ''} ${isToday ? styles.dayToday : ''} ${isSelected ? styles.daySelected : ''}`}
                       disabled={!day}
-                      onClick={() => day && setSelectedDay(day)}
+                      onClick={() => day && handleOpenDayModal(day)}
+                      title={day && dayEvents.length ? `${dayEvents.length} task(s) scheduled` : ''}
                     >
                       {day}
-                      {hasEvent && <i />}
+                      {dotStatus && <i className={styles[`dot_${dotStatus}`]} />}
                     </button>
                   );
                 })}
               </div>
 
-              <div className={styles.selectedEvent}>
-                <div className={styles.eventDot} />
+              <div
+                className={styles.selectedEvent}
+                onClick={() => selectedDay && handleOpenDayModal(selectedDay)}
+                style={{ cursor: 'pointer' }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleOpenDayModal(selectedDay); }}
+              >
+                <div
+                  className={styles.eventDot}
+                  style={{
+                    background: selectedEvents.some((t) => t.status === 'missed')
+                      ? '#f59e0b'
+                      : selectedEvents.some((t) => t.status === 'completed')
+                        ? '#15803d'
+                        : selectedEvents.length ? '#1b4fd8' : '#76917c',
+                  }}
+                />
                 <div>
-                  <span>{selectedEvents[0]?.label || 'No scheduled review'}</span>
-                  <small>{selectedEvents.length ? 'Scheduled legacy task' : 'Your calendar is clear'}</small>
+                  <span>{selectedEvents[0]?.title || 'No scheduled review'}</span>
+                  <small>
+                    {selectedEvents.length
+                      ? `${selectedEvents.length} scheduled task${selectedEvents.length > 1 ? 's' : ''} (click to view)`
+                      : 'Your calendar is clear — click to add task'}
+                  </small>
                 </div>
               </div>
             </section>
@@ -836,6 +968,17 @@ const Dashboard = () => {
           <span>Everything important, organised.</span>
         </div>
       </main>
+
+      <DayTaskModal
+        isOpen={isDayModalOpen}
+        onClose={() => setIsDayModalOpen(false)}
+        selectedDate={dayModalDate}
+        tasks={tasks}
+        assets={vaultAssets}
+        onToggleStatus={handleToggleTaskStatus}
+        onDeleteTask={handleDeleteTask}
+        onSaveTask={handleSaveTask}
+      />
 
       <BottomNav />
     </div>

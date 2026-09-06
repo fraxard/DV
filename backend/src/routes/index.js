@@ -15,5 +15,7 @@ router.use('/documents', require('./document.routes'));
 router.use('/nominees', require('./nominee.routes'));
 router.use('/dashboard', require('./dashboard.routes'));
 router.use('/activity', require('./activity.routes'));
+router.use('/custom-categories', require('./customCategory.routes'));
+router.use('/tasks', require('./task.routes'));
 
 module.exports = router;

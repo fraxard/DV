@@ -7,7 +7,7 @@ import {
   Settings, UserPlus, Info, Calendar, Copy, CheckCheck
 } from 'lucide-react';
 import styles from './AssetDetails.module.css';
-import { getCategoryFieldConfig } from '../config/assetCategoryFields';
+import { ASSET_CATEGORY_FIELDS, getCategoryFieldConfig } from '../config/assetCategoryFields';
 import BottomNav from '../components/BottomNav';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -101,6 +101,7 @@ export default function AssetDetails() {
   const [asset, setAsset] = useState(null);
   const [loadingAsset, setLoadingAsset] = useState(true);
   const [assetError, setAssetError] = useState('');
+  const [isNotFound, setIsNotFound] = useState(false);
 
   // Documents & Loading States
   const [documents, setDocuments] = useState([]);
@@ -171,28 +172,101 @@ export default function AssetDetails() {
   // Edit Allocation Modal
   const [editingAssignment, setEditingAssignment] = useState(null);
 
+  // Custom Categories
+  const [customCategories, setCustomCategories] = useState([]);
+
+  const fetchCustomCategories = async () => {
+    try {
+      const res = await fetch(`${API_URL}/custom-categories`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCustomCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error('Error fetching custom categories:', err);
+    }
+  };
+
+  const getEffectiveCategoryMeta = (cat) => {
+    const key = (cat || 'other').toLowerCase().trim();
+    if (CATEGORY_META[key]) return CATEGORY_META[key];
+    const custom = (customCategories || []).find((c) => c && c.key && c.key.toLowerCase() === key);
+    if (custom) {
+      return {
+        label: custom.name || key,
+        description: custom.description || 'Custom legacy category',
+        icon: FolderOpen,
+      };
+    }
+    return {
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      description: 'Recorded legacy items and assets',
+      icon: FolderOpen,
+    };
+  };
+
+  const getEffectiveCategoryConfig = (category) => {
+    const key = (category || 'other').toLowerCase().trim();
+    if (ASSET_CATEGORY_FIELDS && ASSET_CATEGORY_FIELDS[key]) {
+      return ASSET_CATEGORY_FIELDS[key];
+    }
+    const custom = (customCategories || []).find((c) => c && c.key && c.key.toLowerCase() === key);
+    if (custom) {
+      return {
+        categoryKey: custom.key,
+        label: custom.name || key,
+        description: custom.description || 'Custom legacy category',
+        isCustom: true,
+        fields: (custom.fields || []).map((f) => ({
+          key: f.key,
+          label: f.label,
+          type: f.data_type,
+          required: f.is_required,
+          copyable: f.data_type !== 'textarea' && f.data_type !== 'boolean',
+        })),
+      };
+    }
+    return getCategoryFieldConfig(category);
+  };
+
   // Fetch Asset
   const fetchAsset = async () => {
+    if (!assetId) {
+      setLoadingAsset(false);
+      setIsNotFound(true);
+      setAssetError('Asset not found');
+      return;
+    }
     try {
       setLoadingAsset(true);
       setAssetError('');
+      setIsNotFound(false);
       const res = await fetch(`${API_URL}/vault/assets/${assetId}`, { credentials: 'include' });
-      if (res.status === 404) {
-        setAssetError('Asset not found or access denied.');
+      if (res.status === 404 || res.status === 403) {
+        setIsNotFound(true);
+        setAssetError('Asset not found');
         setAsset(null);
         return;
       }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setAssetError(data.error?.message || 'Failed to load asset details.');
+        setIsNotFound(false);
+        setAssetError(data.error?.message || "We couldn't load this asset.");
         setAsset(null);
         return;
       }
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!data || !data.asset) {
+        setIsNotFound(false);
+        setAssetError("We couldn't load this asset.");
+        setAsset(null);
+        return;
+      }
       setAsset(data.asset);
     } catch (err) {
       console.error('Error fetching asset:', err);
-      setAssetError('Network error while loading asset.');
+      setIsNotFound(false);
+      setAssetError("We couldn't load this asset.");
     } finally {
       setLoadingAsset(false);
     }
@@ -251,6 +325,11 @@ export default function AssetDetails() {
       fetchDocuments();
       fetchAllocations();
       fetchAllNominees();
+      fetchCustomCategories();
+    } else {
+      setLoadingAsset(false);
+      setIsNotFound(true);
+      setAssetError('Asset not found');
     }
   }, [assetId]);
 
@@ -319,12 +398,13 @@ export default function AssetDetails() {
   const handleOpenEditCategoryInfo = () => {
     if (!asset) return;
     setCategoryInfoError('');
-    const config = getCategoryFieldConfig(asset.category);
+    const config = getEffectiveCategoryConfig(asset.category);
     const initialData = {};
-    config.fields.forEach((field) => {
-      initialData[field.key] = asset.metadata && asset.metadata[field.key] !== undefined && asset.metadata[field.key] !== null
-        ? asset.metadata[field.key]
-        : '';
+    (config.fields || []).forEach((field) => {
+      const existingVal = (asset.metadata?.customFields && asset.metadata.customFields[field.key] !== undefined)
+        ? asset.metadata.customFields[field.key]
+        : (asset.metadata && asset.metadata[field.key] !== undefined ? asset.metadata[field.key] : '');
+      initialData[field.key] = existingVal !== null ? existingVal : '';
     });
     setCategoryInfoFormData(initialData);
     setIsEditCategoryInfoOpen(true);
@@ -342,30 +422,40 @@ export default function AssetDetails() {
       setIsSavingCategoryInfo(true);
       setCategoryInfoError('');
 
-      // Merge updated fields with existing asset metadata (preserving other keys if any)
-      const updatedMetadata = {
-        ...(asset.metadata || {}),
-        ...categoryInfoFormData,
-      };
+      const config = getEffectiveCategoryConfig(asset.category);
+      let updatedMetadata = { ...(asset.metadata || {}) };
 
-      // Clean empty strings or whitespace-only strings to null or omit
-      const cleanedMetadata = {};
-      Object.entries(updatedMetadata).forEach(([k, v]) => {
+      const cleanedFields = {};
+      Object.entries(categoryInfoFormData).forEach(([k, v]) => {
         if (typeof v === 'string') {
           const trimmed = v.trim();
-          if (trimmed.length > 0) {
-            cleanedMetadata[k] = trimmed;
-          }
+          if (trimmed.length > 0) cleanedFields[k] = trimmed;
         } else if (v !== null && v !== undefined) {
-          cleanedMetadata[k] = v;
+          cleanedFields[k] = v;
         }
       });
+
+      if (config.isCustom) {
+        updatedMetadata = {
+          ...updatedMetadata,
+          ...cleanedFields,
+          customFields: {
+            ...(updatedMetadata.customFields || {}),
+            ...cleanedFields,
+          },
+        };
+      } else {
+        updatedMetadata = {
+          ...updatedMetadata,
+          ...cleanedFields,
+        };
+      }
 
       const res = await fetch(`${API_URL}/vault/assets/${assetId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ metadata: cleanedMetadata }),
+        body: JSON.stringify({ metadata: updatedMetadata }),
       });
 
       const data = await res.json();
@@ -693,15 +783,40 @@ export default function AssetDetails() {
             <ArrowLeft size={12} /> Back to Vault
           </Link>
           <div className={styles.stateContainer}>
-            <h2 className={styles.stateTitle}>Loading asset details...</h2>
+            <h2 className={styles.stateTitle}>Loading asset...</h2>
             <p className={styles.stateText}>Retrieving record from your secure vault.</p>
           </div>
         </main>
+        <BottomNav />
       </div>
     );
   }
 
-  // Error / Not Found State
+  // Not Found State
+  if (isNotFound || (!asset && assetError === 'Asset not found')) {
+    return (
+      <div className={styles.shell}>
+        <main className={styles.content}>
+          <Link to="/vault" className={styles.back}>
+            <ArrowLeft size={12} /> Back to Vault
+          </Link>
+          <div className={styles.stateContainer}>
+            <AlertTriangle size={32} color="#dc2626" />
+            <h2 className={styles.stateTitle}>Asset not found</h2>
+            <p className={styles.stateText}>
+              The requested asset could not be found or access is denied.
+            </p>
+            <Link to="/vault" className={styles.submitBtn} style={{ textDecoration: 'none', marginTop: '12px', display: 'inline-flex' }}>
+              Back to Vault
+            </Link>
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Error State
   if (assetError || !asset) {
     return (
       <div className={styles.shell}>
@@ -711,20 +826,36 @@ export default function AssetDetails() {
           </Link>
           <div className={styles.stateContainer}>
             <AlertTriangle size={32} color="#dc2626" />
-            <h2 className={styles.stateTitle}>Asset Not Found</h2>
+            <h2 className={styles.stateTitle}>We couldn't load this asset.</h2>
             <p className={styles.stateText}>
-              {assetError || 'The requested asset could not be found or access is denied.'}
+              {assetError || "An unexpected error occurred while loading this asset."}
             </p>
-            <Link to="/vault" className={styles.submitBtn} style={{ textDecoration: 'none', marginTop: '10px' }}>
-              Return to Vault
-            </Link>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '12px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className={styles.submitBtn}
+                onClick={() => {
+                  fetchAsset();
+                  fetchDocuments();
+                  fetchAllocations();
+                  fetchAllNominees();
+                  fetchCustomCategories();
+                }}
+              >
+                Try Again
+              </button>
+              <Link to="/vault" className={styles.cancelBtn} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+                Back to Vault
+              </Link>
+            </div>
           </div>
         </main>
+        <BottomNav />
       </div>
     );
   }
 
-  const categoryMeta = getCategoryMeta(asset.category);
+  const categoryMeta = getEffectiveCategoryMeta(asset.category);
   const CategoryIcon = categoryMeta.icon;
 
   const assignedNomineeIds = new Set(allocations.map((a) => a.nominee_id));
@@ -920,20 +1051,30 @@ export default function AssetDetails() {
 
           {/* 2. Asset Information / Dynamic Category Information Section */}
           {(() => {
-            const categoryConfig = getCategoryFieldConfig(asset.category);
+            const categoryConfig = getEffectiveCategoryConfig(asset.category);
             const configuredFields = categoryConfig.fields || [];
+
+            const getFieldValue = (fieldKey) => {
+              if (!asset.metadata) return null;
+              if (asset.metadata.customFields && asset.metadata.customFields[fieldKey] !== undefined) {
+                return asset.metadata.customFields[fieldKey];
+              }
+              return asset.metadata[fieldKey] !== undefined ? asset.metadata[fieldKey] : null;
+            };
 
             // Collect any extra custom metadata keys that might not be in the configured fields
             const configuredKeysSet = new Set(configuredFields.map((f) => f.key));
+            configuredKeysSet.add('customFields');
             const extraEntries = asset.metadata && typeof asset.metadata === 'object'
               ? Object.entries(asset.metadata).filter(
                   ([k, v]) => !configuredKeysSet.has(k) && v !== null && v !== undefined && v !== ''
                 )
               : [];
 
-            const hasAnyMetadata = configuredFields.some(
-              (f) => asset.metadata && asset.metadata[f.key] !== undefined && asset.metadata[f.key] !== null && asset.metadata[f.key] !== ''
-            ) || extraEntries.length > 0;
+            const hasAnyMetadata = configuredFields.some((f) => {
+              const v = getFieldValue(f.key);
+              return v !== undefined && v !== null && v !== '';
+            }) || extraEntries.length > 0;
 
             return (
               <section className={styles.section}>
@@ -957,13 +1098,13 @@ export default function AssetDetails() {
                       <div className={styles.categoryInfoGrid}>
                         {configuredFields
                           .filter((field) => {
-                            const rawVal = asset.metadata ? asset.metadata[field.key] : null;
+                            const rawVal = getFieldValue(field.key);
                             return rawVal !== null && rawVal !== undefined && String(rawVal).trim() !== '';
                           })
                           .map((field) => {
-                            const rawVal = asset.metadata[field.key];
-                            const displayVal = String(rawVal);
-                            const isCopyable = field.copyable;
+                            const rawVal = getFieldValue(field.key);
+                            const displayVal = typeof rawVal === 'boolean' ? (rawVal ? 'Yes' : 'No') : String(rawVal);
+                            const isCopyable = field.copyable && typeof rawVal !== 'boolean';
                             const isCopied = copiedFieldKey === field.key;
 
                             return (
@@ -1250,15 +1391,26 @@ export default function AssetDetails() {
                       onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
                       required
                     >
-                      <option value="property">Property</option>
-                      <option value="financial">Financial</option>
-                      <option value="insurance">Insurance</option>
-                      <option value="crypto">Crypto</option>
-                      <option value="digital">Digital</option>
-                      <option value="legal">Legal</option>
-                      <option value="business">Business</option>
-                      <option value="investments">Investments</option>
-                      <option value="other">Other Assets</option>
+                      <optgroup label="Standard Categories">
+                        <option value="property">Property</option>
+                        <option value="financial">Financial</option>
+                        <option value="insurance">Insurance</option>
+                        <option value="crypto">Crypto</option>
+                        <option value="digital">Digital</option>
+                        <option value="legal">Legal</option>
+                        <option value="business">Business</option>
+                        <option value="investments">Investments</option>
+                        <option value="other">Other Assets</option>
+                      </optgroup>
+                      {customCategories.length > 0 && (
+                        <optgroup label="Custom Categories">
+                          {customCategories.map((c) => (
+                            <option key={c.id} value={c.key}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
                   </div>
 
@@ -1683,7 +1835,7 @@ export default function AssetDetails() {
 
         {/* Edit Category Information Modal */}
         {isEditCategoryInfoOpen && (() => {
-          const categoryConfig = getCategoryFieldConfig(asset.category);
+          const categoryConfig = getEffectiveCategoryConfig(asset.category);
           const fields = categoryConfig.fields || [];
 
           return (
@@ -1741,7 +1893,22 @@ export default function AssetDetails() {
                             {field.required && <span style={{ color: '#dc2626' }}> *</span>}
                           </label>
 
-                          {field.type === 'select' ? (
+                          {field.type === 'boolean' ? (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '11px', color: '#171917' }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(value)}
+                                onChange={(e) =>
+                                  setCategoryInfoFormData({
+                                    ...categoryInfoFormData,
+                                    [field.key]: e.target.checked,
+                                  })
+                                }
+                                style={{ width: '15px', height: '15px', cursor: 'pointer' }}
+                              />
+                              <span>Enable / Yes</span>
+                            </label>
+                          ) : field.type === 'select' ? (
                             <select
                               className={styles.formSelect}
                               value={value}
@@ -1774,7 +1941,7 @@ export default function AssetDetails() {
                             />
                           ) : (
                             <input
-                              type={field.type === 'date' ? 'date' : 'text'}
+                              type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : field.type === 'url' ? 'url' : 'text'}
                               className={styles.formInput}
                               placeholder={field.placeholder || ''}
                               value={value}
