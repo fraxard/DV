@@ -13,5 +13,6 @@ router.use('/auth', require('./auth.routes'));
 router.use('/vault', require('./vault.routes'));
 router.use('/documents', require('./document.routes'));
 router.use('/nominees', require('./nominee.routes'));
+router.use('/dashboard', require('./dashboard.routes'));
 
 module.exports = router;
