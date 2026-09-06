@@ -1590,4 +1590,201 @@
   }
 }
 
+/* =========================================================
+   DEDICATED CALENDAR WORKSPACE STYLES
+   ========================================================= */
+.calendarWorkspaceGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .calendarWorkspaceGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.calendarColumn,
+.scheduleColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.calendarCardInner {
+  border: 1px solid var(--dv-line);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.calendarToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.calendarToolbar strong {
+  font-size: 13px;
+  font-weight: 650;
+  color: #171917;
+}
+
+.calendarToolbar div {
+  display: flex;
+  gap: 4px;
+}
+
+.calendarToolbar button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--dv-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #626963;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.calendarToolbar button:hover {
+  background: #eef1ee;
+  color: #171917;
+}
+
+.weekdays,
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.weekdays {
+  margin-top: 14px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(30, 35, 32, 0.06);
+}
+
+.weekdays span {
+  text-align: center;
+  color: #a0a6a2;
+  font-size: 9px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.calendarGrid {
+  margin-top: 6px;
+}
+
+.dayCell {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #5e655f;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.dayCell:hover:not(:disabled) {
+  background: #eef1ee;
+  color: #171917;
+}
+
+.dayEmpty {
+  cursor: default;
+}
+
+.dayToday {
+  color: #fff !important;
+  background: #252a26 !important;
+  font-weight: 700 !important;
+}
+
+.dayToday:hover {
+  background: #252a26 !important;
+}
+
+.daySelected:not(.dayToday) {
+  box-shadow: inset 0 0 0 1.5px #1b4fd8;
+  background: rgba(27, 79, 216, 0.04);
+  color: #1b4fd8;
+  font-weight: 600;
+}
+
+.dayCell i {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #1b4fd8;
+}
+
+.dayCell .dot_completed {
+  background: #15803d;
+}
+
+.dayCell .dot_missed {
+  background: #f59e0b;
+}
+
+.dayCell .dot_scheduled {
+  background: #1b4fd8;
+}
+
+.selectedEvent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f1f4f1;
+  border: 1px solid rgba(30, 35, 32, 0.06);
+  transition: background 0.15s ease;
+}
+
+.selectedEvent:hover {
+  background: #e8ece8;
+}
+
+.selectedEvent div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.selectedEvent span {
+  font-size: 11px;
+  font-weight: 650;
+  color: #171917;
+}
+
+.selectedEvent small {
+  color: #727974;
+  font-size: 10px;
+}
+
+.eventDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #76917c;
+}
+
 

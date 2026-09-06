@@ -10,6 +10,8 @@ import {
   ChevronRight,
   Clock3,
   Coins,
+  Eye,
+  EyeOff,
   FileText,
   FolderOpen,
   Home,
@@ -30,6 +32,7 @@ import {
 import styles from './Dashboard.module.css';
 import BottomNav from '../components/BottomNav';
 import DayTaskModal from '../components/tasks/DayTaskModal';
+import { monthNames, weekdayNames, buildCalendar } from '../components/tasks/taskUtils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -91,33 +94,6 @@ function formatCurrencyAmount(amount, currency = 'INR') {
   return `${curr} ${num.toLocaleString()}`;
 }
 
-const activity = [
-  { time: '02:42 PM', title: 'Passport added', meta: 'Documents', icon: FileText },
-  { time: '11:18 AM', title: 'Nominee updated', meta: 'People', icon: UsersRound },
-  { time: 'Yesterday', title: 'Insurance policy added', meta: 'Protection', icon: ShieldCheck },
-  { time: '31 Aug', title: 'Bank account added', meta: 'Financial', icon: Landmark },
-];
-
-const monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-function buildCalendar(year, month) {
-  const first = new Date(year, month, 1);
-  const startOffset = (first.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells = [];
-
-  for (let i = 0; i < startOffset; i += 1) cells.push(null);
-  for (let day = 1; day <= daysInMonth; day += 1) cells.push(day);
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  return cells;
-}
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -126,6 +102,7 @@ const Dashboard = () => {
     new Date(now.getFullYear(), now.getMonth(), 1)
   );
   const [selectedDay, setSelectedDay] = useState(now.getDate());
+  const [isFinancialHidden, setIsFinancialHidden] = useState(false);
 
   // Phase 4A Live Dashboard Data
   const [dashboardData, setDashboardData] = useState(null);
@@ -793,6 +770,8 @@ const Dashboard = () => {
                   <span>Total recorded value</span>
                   {loadingDashboard ? (
                     <strong>--</strong>
+                  ) : isFinancialHidden ? (
+                    <strong>••••••••</strong>
                   ) : isMultiCurrency ? (
                     <div className={styles.currencyPillRow}>
                       {assets.totalValueByCurrency.map((item) => (
@@ -808,7 +787,19 @@ const Dashboard = () => {
                     </strong>
                   )}
                 </div>
-                <button className={styles.eyeButton} onClick={(e) => { e.preventDefault(); }}>••••</button>
+                <button
+                  type="button"
+                  className={styles.eyeButton}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsFinancialHidden((prev) => !prev);
+                  }}
+                  title={isFinancialHidden ? 'Show financial values' : 'Hide financial values'}
+                  aria-label={isFinancialHidden ? 'Show financial values' : 'Hide financial values'}
+                >
+                  {isFinancialHidden ? <Eye size={12} /> : <EyeOff size={12} />}
+                </button>
               </div>
 
               {/* Dynamic category breakdowns if present */}
@@ -821,7 +812,9 @@ const Dashboard = () => {
                   assets.byCategory.slice(0, 3).map((cat) => (
                     <div key={cat.category}>
                       <span>{formatCategoryName(cat.category)}</span>
-                      <strong>{formatCurrencyAmount(cat.value || 0, singleCurrency)}</strong>
+                      <strong>
+                        {isFinancialHidden ? '••••••••' : formatCurrencyAmount(cat.value || 0, singleCurrency)}
+                      </strong>
                     </div>
                   ))
                 )}
@@ -952,9 +945,6 @@ const Dashboard = () => {
                 </span>
                 <span className={readinessScore >= 90 ? '' : styles.pendingItem}>
                   <Check size={11} /> All assets protected
-                </span>
-                <span className={styles.pendingItem}>
-                  ○ Emergency instructions
                 </span>
               </div>
 

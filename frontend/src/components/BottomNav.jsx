@@ -13,6 +13,7 @@ export default function BottomNav() {
     { label: 'Vault', to: '/vault', active: path.startsWith('/vault') },
     { label: 'Nominees', to: '/nominees', active: path.startsWith('/nominees') },
     { label: 'Documents', to: '/documents', active: path.startsWith('/documents') },
+    { label: 'Calendar', to: '/calendar', active: path.startsWith('/calendar') },
     { label: 'Activity', to: '/activity', active: path.startsWith('/activity') },
     { label: 'Settings', to: '/settings', active: path.startsWith('/settings') },
   ];

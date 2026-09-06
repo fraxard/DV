@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowLeft, Briefcase, Building, CalendarDays, Check, ChevronRight,
+  AlertTriangle, ArrowLeft, Briefcase, Building, CalendarDays, Check, ChevronLeft, ChevronRight,
   Coins, Download, FileCheck, FileText, FolderOpen, Globe, Landmark, Pencil,
   Percent, Plus, Search, Settings, ShieldCheck, Trash2, TrendingUp, Upload,
   UploadCloud, UserCheck, UserPlus, UsersRound, WalletCards, X, Clock, FolderPlus
@@ -9,8 +9,16 @@ import {
 import styles from './WorkspacePage.module.css';
 import BottomNav from '../components/BottomNav';
 import TaskModal from '../components/tasks/TaskModal';
+import DayTaskModal from '../components/tasks/DayTaskModal';
 import CategoryBuilderModal from '../components/CategoryBuilderModal';
-import { formatTaskDate, formatTaskTime, formatRelativeActivityDate } from '../components/tasks/taskUtils';
+import {
+  formatTaskDate,
+  formatTaskTime,
+  formatRelativeActivityDate,
+  monthNames,
+  weekdayNames,
+  buildCalendar,
+} from '../components/tasks/taskUtils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -308,13 +316,23 @@ export default function WorkspacePage({ section }) {
 
   // Activity Tasks State
   const [tasks, setTasks] = useState([]);
-  const [loadingTasks, setLoadingTasks] = useState(section === 'activity');
+  const [loadingTasks, setLoadingTasks] = useState(section === 'activity' || section === 'calendar');
   const [activeTaskTab, setActiveTaskTab] = useState('upcoming'); // 'upcoming', 'completed', 'missed'
   const [taskPage, setTaskPage] = useState(1);
   const [taskLimit] = useState(5);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+
+  // Calendar Workspace State
+  const now = new Date();
+  const [calendarDate, setCalendarDate] = useState(
+    new Date(now.getFullYear(), now.getMonth(), 1)
+  );
+  const [selectedDay, setSelectedDay] = useState(now.getDate());
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
+  const [dayModalDate, setDayModalDate] = useState('');
+  const [initialAddingTask, setInitialAddingTask] = useState(false);
 
   // Delete Asset confirmation modal state
   const [assetToDelete, setAssetToDelete] = useState(null);
@@ -392,6 +410,13 @@ export default function WorkspacePage({ section }) {
       handleOpenAddAsset();
     } else if (hasNew === '1' && isNomineeSection) {
       handleOpenAddNominee();
+    } else if ((hasNew === '1' || hasNew === 'event') && section === 'calendar') {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      setSelectedDay(today.getDate());
+      setDayModalDate(todayStr);
+      setInitialAddingTask(true);
+      setIsDayModalOpen(true);
     }
   }, [hasNew, section]);
 
@@ -407,6 +432,10 @@ export default function WorkspacePage({ section }) {
         if (nomineeToDelete && !isDeletingNominee) handleCloseDeleteNomineeConfirm();
         if (editingDocument && !isUpdatingDoc) handleCloseEditDoc();
         if (documentToDelete && !isDeletingDoc) handleCloseDeleteConfirm();
+        if (isDayModalOpen) {
+          setIsDayModalOpen(false);
+          setInitialAddingTask(false);
+        }
         if (uploadParam && !isUploading) navigate('/documents');
       }
     };
@@ -416,7 +445,7 @@ export default function WorkspacePage({ section }) {
     activeCategoryModal, isAddAssetOpen, isSubmittingAsset, assetToDelete, isDeletingAsset,
     allocatingAsset, isSubmittingAssign, isNomineeModalOpen, isSubmittingNominee,
     nomineeToDelete, isDeletingNominee, editingDocument, isUpdatingDoc,
-    documentToDelete, isDeletingDoc, uploadParam, isUploading
+    documentToDelete, isDeletingDoc, uploadParam, isUploading, isDayModalOpen
   ]);
 
   const fetchDocuments = async () => {
@@ -538,6 +567,9 @@ export default function WorkspacePage({ section }) {
       fetchAssets();
     } else if (section === 'activity') {
       fetchActivities(1);
+      fetchTasks();
+      fetchAssets();
+    } else if (section === 'calendar') {
       fetchTasks();
       fetchAssets();
     }
@@ -1275,6 +1307,54 @@ export default function WorkspacePage({ section }) {
     }
   };
 
+  // Calendar View Helpers
+  const calendarYear = calendarDate.getFullYear();
+  const calendarMonth = calendarDate.getMonth();
+  const calendarCells = useMemo(() => buildCalendar(calendarYear, calendarMonth), [calendarYear, calendarMonth]);
+
+  const tasksByDay = useMemo(() => {
+    const map = {};
+    for (const t of tasks) {
+      const d = t.due_date || t.dueDate;
+      if (d) {
+        if (!map[d]) map[d] = [];
+        map[d].push(t);
+      }
+    }
+    return map;
+  }, [tasks]);
+
+  const changeCalendarMonth = (delta) => {
+    setCalendarDate(new Date(calendarYear, calendarMonth + delta, 1));
+    setSelectedDay(1);
+  };
+
+  const selectedDateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
+  const selectedDateTasks = tasksByDay[selectedDateStr] || [];
+
+  const handleOpenDayModal = (dayNumber, isAdding = false) => {
+    const formattedDate = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
+    setSelectedDay(dayNumber);
+    setDayModalDate(formattedDate);
+    setInitialAddingTask(isAdding);
+    setIsDayModalOpen(true);
+  };
+
+  const handleOpenAddDateModal = (dateStr = null) => {
+    const targetDate = dateStr || selectedDateStr;
+    setDayModalDate(targetDate);
+    setInitialAddingTask(true);
+    setIsDayModalOpen(true);
+  };
+
+  const selectedDateObj = new Date(calendarYear, calendarMonth, selectedDay);
+  const selectedDateTitle = selectedDateObj.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
   // Section-specific dynamic statistics
   const currentStats = isDocSection
     ? [
@@ -1308,6 +1388,21 @@ export default function WorkspacePage({ section }) {
         [activities[0]?.relative_time || 'Recent', 'last activity'],
         ['Protected', 'audit trail'],
       ]
+    : section === 'calendar'
+    ? [
+        [String(tasks.filter((t) => t.status === 'scheduled').length).padStart(2, '0'), 'scheduled'],
+        [
+          String(
+            tasks.filter((t) => {
+              const d = t.due_date || t.dueDate;
+              const currentMonthPrefix = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}`;
+              return d && d.startsWith(currentMonthPrefix) && t.status === 'scheduled';
+            }).length
+          ).padStart(2, '0'),
+          'this month',
+        ],
+        [String(tasks.filter((t) => t.status === 'completed').length).padStart(2, '0'), 'completed'],
+      ]
     : config.stats;
 
   return (
@@ -1324,7 +1419,7 @@ export default function WorkspacePage({ section }) {
           <div className={styles.headerIcon}><Icon size={19} /></div>
         </header>
 
-        {(hasNew && !isDocSection && !isVaultSection && !isNomineeSection) && (
+        {(hasNew && !isDocSection && !isVaultSection && !isNomineeSection && section !== 'calendar') && (
           <div className={styles.notice}>
             <strong>Create flow ready</strong>
             <span>
@@ -1367,8 +1462,17 @@ export default function WorkspacePage({ section }) {
                   <UserPlus size={13} /> Add nominee
                 </button>
               )}
+              {section === 'calendar' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddDateModal()}
+                  className={styles.actionBtn}
+                >
+                  <Plus size={13} /> Add task
+                </button>
+              )}
               {config.actions
-                .filter(([label, to]) => !(isVaultSection && to === 'add-asset') && !(isNomineeSection && to === 'add-nominee'))
+                .filter(([label, to]) => !(isVaultSection && to === 'add-asset') && !(isNomineeSection && to === 'add-nominee') && !(section === 'calendar' && to.includes('calendar')))
                 .map(([label, to, ActionIcon]) => (
                   <Link to={to} className={styles.action} key={label}>
                     <ActionIcon size={13} /> {label}
@@ -2098,6 +2202,222 @@ export default function WorkspacePage({ section }) {
                       </>
                     );
                   })()}
+                </div>
+              </div>
+            ) : section === 'calendar' ? (
+              <div className={styles.calendarWorkspaceGrid}>
+                {/* Left Column: Interactive Month Calendar */}
+                <div className={styles.calendarColumn}>
+                  <div className={styles.columnHeader}>
+                    <div className={styles.columnTitle}>
+                      <CalendarDays size={14} />
+                      <span>Monthly View</span>
+                    </div>
+                    <span style={{ fontSize: '10px', color: '#8c938e' }}>
+                      {monthNames[calendarMonth]} {calendarYear}
+                    </span>
+                  </div>
+
+                  <div className={styles.calendarCardInner}>
+                    <div className={styles.calendarToolbar}>
+                      <strong>{monthNames[calendarMonth]} {calendarYear}</strong>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => changeCalendarMonth(-1)}
+                          aria-label="Previous month"
+                        >
+                          <ChevronLeft size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => changeCalendarMonth(1)}
+                          aria-label="Next month"
+                        >
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.weekdays}>
+                      {weekdayNames.map((d) => (
+                        <span key={d}>{d}</span>
+                      ))}
+                    </div>
+
+                    <div className={styles.calendarGrid}>
+                      {calendarCells.map((day, index) => {
+                        const dateKey = day ? `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : null;
+                        const dayEvents = dateKey ? tasksByDay[dateKey] || [] : [];
+                        const isToday = day === now.getDate() && calendarMonth === now.getMonth() && calendarYear === now.getFullYear();
+                        const isSelected = day === selectedDay;
+
+                        const hasCompleted = dayEvents.some((t) => t.status === 'completed');
+                        const hasMissed = dayEvents.some((t) => t.status === 'missed');
+                        const hasScheduled = dayEvents.some((t) => t.status === 'scheduled');
+                        const dotStatus = hasMissed ? 'missed' : hasScheduled ? 'scheduled' : hasCompleted ? 'completed' : null;
+
+                        return (
+                          <button
+                            key={`${day || 'empty'}-${index}`}
+                            type="button"
+                            className={`${styles.dayCell} ${!day ? styles.dayEmpty : ''} ${isToday ? styles.dayToday : ''} ${isSelected ? styles.daySelected : ''}`}
+                            disabled={!day}
+                            onClick={() => {
+                              if (day) {
+                                setSelectedDay(day);
+                                handleOpenDayModal(day);
+                              }
+                            }}
+                            title={day && dayEvents.length ? `${dayEvents.length} task(s) on ${dateKey}` : ''}
+                          >
+                            {day}
+                            {dotStatus && <i className={styles[`dot_${dotStatus}`]} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div
+                      className={styles.selectedEvent}
+                      onClick={() => selectedDay && handleOpenDayModal(selectedDay)}
+                      style={{ cursor: 'pointer' }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleOpenDayModal(selectedDay); }}
+                    >
+                      <div
+                        className={styles.eventDot}
+                        style={{
+                          background: selectedDateTasks.some((t) => t.status === 'missed')
+                            ? '#f59e0b'
+                            : selectedDateTasks.some((t) => t.status === 'completed')
+                              ? '#15803d'
+                              : selectedDateTasks.length ? '#1b4fd8' : '#76917c',
+                        }}
+                      />
+                      <div>
+                        <span>{selectedDateTasks[0]?.title || 'No scheduled review'}</span>
+                        <small>
+                          {selectedDateTasks.length
+                            ? `${selectedDateTasks.length} scheduled task${selectedDateTasks.length > 1 ? 's' : ''} (click to view)`
+                            : 'Selected day is clear — click to add task'}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Selected Date Schedule & Tasks */}
+                <div className={styles.scheduleColumn}>
+                  <div className={styles.columnHeader}>
+                    <div className={styles.columnTitle}>
+                      <Clock size={14} />
+                      <span>{selectedDateTitle}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.actionBtn}
+                      style={{ padding: '4px 10px', fontSize: '10px' }}
+                      onClick={() => handleOpenDayModal(selectedDay, true)}
+                    >
+                      <Plus size={11} /> Add Task
+                    </button>
+                  </div>
+
+                  {loadingTasks ? (
+                    <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '11px', color: '#8c938e' }}>
+                      Loading tasks...
+                    </div>
+                  ) : selectedDateTasks.length === 0 ? (
+                    <div className={styles.taskEmptyState} style={{ padding: '24px 16px', textAlign: 'center' }}>
+                      <CalendarDays size={24} color="#8c938e" style={{ margin: '0 auto 8px', display: 'block' }} />
+                      <strong>No tasks for this date</strong>
+                      <p style={{ margin: '4px 0 12px', fontSize: '11px', color: '#667169' }}>
+                        Schedule a document review, nominee verification, or renewal deadline.
+                      </p>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={() => handleOpenDayModal(selectedDay, true)}
+                      >
+                        <Plus size={12} /> Schedule Task
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.taskListContainer}>
+                      {selectedDateTasks.map((t) => {
+                        const isDone = t.status === 'completed';
+                        const isMissed = t.status === 'missed';
+
+                        return (
+                          <div
+                            key={t.id}
+                            className={`${styles.taskCard} ${isDone ? styles.taskCardCompleted : ''} ${isMissed ? styles.taskCardMissed : ''}`}
+                          >
+                            <button
+                              type="button"
+                              className={`${styles.taskCheckbox} ${isDone ? styles.taskCheckboxChecked : ''}`}
+                              onClick={() => handleToggleTaskStatus(t.id, isDone ? 'scheduled' : 'completed')}
+                              title={isDone ? 'Mark as incomplete' : 'Mark as complete'}
+                            >
+                              {isDone && <Check size={11} strokeWidth={3} />}
+                            </button>
+
+                            <div className={styles.taskBody}>
+                              <div className={styles.taskHeaderRow}>
+                                <span className={styles.taskName}>{t.title}</span>
+                                <span className={styles.taskDueBadge}>
+                                  <CalendarDays size={10} />
+                                  {formatTaskDate(t.due_date || t.dueDate)}
+                                  {(t.due_time || t.dueTime) ? ` · ${formatTaskTime(t.due_time || t.dueTime)}` : ''}
+                                </span>
+                              </div>
+
+                              <div className={styles.taskSubRow}>
+                                {(t.asset_name || t.assetName) && (
+                                  <span className={styles.taskAssetTag}>
+                                    Asset: {t.asset_name || t.assetName}
+                                  </span>
+                                )}
+                                <span className={`${styles.taskStatusTag} ${styles['statusTag_' + t.status]}`}>
+                                  {t.status}
+                                </span>
+                              </div>
+
+                              {t.description && (
+                                <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#667169' }}>
+                                  {t.description}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className={styles.taskActionsRow}>
+                              <button
+                                type="button"
+                                className={styles.iconActionBtn}
+                                onClick={() => {
+                                  setDayModalDate(t.due_date || t.dueDate);
+                                  setIsDayModalOpen(true);
+                                }}
+                                title="Edit task"
+                              >
+                                <Pencil size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.iconActionBtn}
+                                onClick={() => handleDeleteTask(t.id)}
+                                title="Delete task"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -3239,6 +3559,28 @@ export default function WorkspacePage({ section }) {
           }}
           onSave={handleSaveTask}
           isSubmitting={isSubmittingTask}
+        />
+
+        {/* Day Task Modal for Calendar */}
+        <DayTaskModal
+          isOpen={isDayModalOpen}
+          onClose={() => {
+            setIsDayModalOpen(false);
+            setInitialAddingTask(false);
+            if (hasNew) navigate('/calendar', { replace: true });
+          }}
+          selectedDate={dayModalDate}
+          tasks={tasks}
+          assets={assets}
+          onToggleStatus={handleToggleTaskStatus}
+          onDeleteTask={handleDeleteTask}
+          onSaveTask={async (taskData, existingTaskId) => {
+            await handleSaveTask(taskData, existingTaskId);
+            setIsDayModalOpen(false);
+            setInitialAddingTask(false);
+            if (hasNew) navigate('/calendar', { replace: true });
+          }}
+          initialAddingTask={initialAddingTask}
         />
       </main>
 

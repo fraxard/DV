@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X, Plus, Check, Clock, CalendarDays, Pencil, Trash2, AlertCircle, CheckCircle2, ShieldCheck
 } from 'lucide-react';
@@ -15,10 +15,18 @@ export default function DayTaskModal({
   onToggleStatus,
   onDeleteTask,
   onSaveTask,
+  initialAddingTask = false,
 }) {
-  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(initialAddingTask);
   const [editingTask, setEditingTask] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsAddingTask(initialAddingTask);
+      setEditingTask(null);
+    }
+  }, [isOpen, initialAddingTask]);
 
   if (!isOpen || !selectedDate) return null;
 
