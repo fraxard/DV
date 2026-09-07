@@ -17,5 +17,6 @@ router.use('/dashboard', require('./dashboard.routes'));
 router.use('/activity', require('./activity.routes'));
 router.use('/custom-categories', require('./customCategory.routes'));
 router.use('/tasks', require('./task.routes'));
+router.use('/support', require('./support.routes'));
 
 module.exports = router;

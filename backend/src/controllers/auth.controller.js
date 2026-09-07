@@ -127,8 +127,9 @@ const logout = async (req, res) => {
 };
 
 const me = async (req, res) => {
+  const user = await authService.getUserById(req.user.id);
   return res.status(200).json({
-    user: req.user,
+    user: user || req.user,
   });
 };
 
@@ -162,6 +163,88 @@ const completeOnboarding = async (req, res) => {
   });
 };
 
+const updateProfile = async (req, res) => {
+  const { name, dateOfBirth, date_of_birth, gender } = req.body;
+  const user = await authService.updateProfile(req.user.id, {
+    name,
+    dateOfBirth: dateOfBirth !== undefined ? dateOfBirth : date_of_birth,
+    gender,
+  });
+  return res.status(200).json({
+    message: 'Profile updated successfully.',
+    user,
+  });
+};
+
+const uploadAvatar = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      error: {
+        message: 'Avatar image file is required.',
+      },
+    });
+  }
+
+  const user = await authService.uploadAvatar(req.user.id, req.file);
+  return res.status(200).json({
+    message: 'Avatar uploaded successfully.',
+    user,
+  });
+};
+
+const getAvatar = async (req, res) => {
+  const { userId } = req.params;
+  const { stream, mimeType } = await authService.getAvatarStream(userId);
+
+  res.setHeader('Content-Type', mimeType);
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  stream.on('error', () => {
+    if (!res.headersSent) {
+      res.status(404).json({ error: { message: 'Avatar not found.' } });
+    }
+  });
+
+  stream.pipe(res);
+};
+
+const requestEmailChange = async (req, res) => {
+  const { newEmail } = req.body;
+  if (!newEmail) {
+    return res.status(400).json({
+      error: {
+        message: 'New email is required.',
+      },
+    });
+  }
+
+  const result = await authService.requestEmailChange(req.user.id, newEmail);
+  return res.status(200).json(result);
+};
+
+const verifyEmailChange = async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({
+      error: {
+        message: 'Verification code is required.',
+      },
+    });
+  }
+
+  const user = await authService.verifyEmailChange(req.user.id, token);
+  return res.status(200).json({
+    message: 'Email updated successfully.',
+    user,
+  });
+};
+
+const resendEmailChange = async (req, res) => {
+  const result = await authService.resendEmailChange(req.user.id);
+  return res.status(200).json(result);
+};
+
 module.exports = {
   register,
   login,
@@ -170,4 +253,10 @@ module.exports = {
   logout,
   me,
   completeOnboarding,
+  updateProfile,
+  uploadAvatar,
+  getAvatar,
+  requestEmailChange,
+  verifyEmailChange,
+  resendEmailChange,
 };

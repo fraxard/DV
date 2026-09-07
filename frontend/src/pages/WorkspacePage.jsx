@@ -12,6 +12,8 @@ import BottomNav from '../components/BottomNav';
 import TaskModal from '../components/tasks/TaskModal';
 import DayTaskModal from '../components/tasks/DayTaskModal';
 import CategoryBuilderModal from '../components/CategoryBuilderModal';
+import ProfileModal from '../components/profile/ProfileModal';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   formatTaskDate,
@@ -260,11 +262,106 @@ const RELATIONSHIPS = [
 export default function WorkspacePage({ section }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const config = configs[section] || configs.vault;
   const Icon = config.icon;
   const hasNew = new URLSearchParams(location.search).get('new');
   const uploadParam = new URLSearchParams(location.search).get('upload');
+
+  // Settings & Profile Modal state
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Support / Contact form state
+  const [supportName, setSupportName] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportError, setSupportError] = useState('');
+  const [supportSuccess, setSupportSuccess] = useState('');
+
+  // Prefill Support Form with user credentials when available
+  useEffect(() => {
+    if (user) {
+      if (!supportName) setSupportName(user.name || user.full_name || '');
+      if (!supportEmail) setSupportEmail(user.email || '');
+    }
+  }, [user]);
+
+  const handleSupportSubmit = async (e) => {
+    e.preventDefault();
+    setSupportError('');
+    setSupportSuccess('');
+
+    const trimmedName = supportName.trim();
+    const trimmedEmail = supportEmail.trim().toLowerCase();
+    const trimmedSubject = supportSubject.trim();
+    const trimmedMessage = supportMessage.trim();
+
+    if (!trimmedName) {
+      setSupportError('Please enter your name.');
+      return;
+    }
+
+    if (!trimmedEmail) {
+      setSupportError('Please enter your email address.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setSupportError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!trimmedSubject) {
+      setSupportError('Please provide a subject for your inquiry.');
+      return;
+    }
+
+    if (!trimmedMessage) {
+      setSupportError('Please provide a message describing your inquiry or issue.');
+      return;
+    }
+
+    try {
+      setSupportLoading(true);
+      const res = await fetch(`${API_URL}/support/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: trimmedName,
+          email: trimmedEmail,
+          subject: trimmedSubject,
+          message: trimmedMessage,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 501) {
+        setSupportError(
+          data?.error?.message ||
+          'Support ticket ingestion is not yet configured on this server. Backend endpoint is pending Phase 2.'
+        );
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error?.message || 'Failed to submit support message.');
+      }
+
+      setSupportSuccess('Thank you for contacting DigiVirasat. Our team will review your message shortly.');
+      setSupportSubject('');
+      setSupportMessage('');
+    } catch (err) {
+      console.error('Support form error:', err);
+      setSupportError(err.message || 'An error occurred while sending your message. Please try again.');
+    } finally {
+      setSupportLoading(false);
+    }
+  };
 
   // Documents, Assets, Nominees, and Activities live state
   const [documents, setDocuments] = useState([]);
@@ -1472,7 +1569,189 @@ export default function WorkspacePage({ section }) {
           })}
         </section>
 
-        <section className={styles.panel}>
+        {section === 'settings' ? (
+          <div className={styles.settingsGrid}>
+            {/* Left Column: Settings Options (50%) */}
+            <section className={`${styles.panel} ${styles.settingsLeftPanel}`}>
+              <div className={styles.panelHead}>
+                <div>
+                  <span className={styles.kicker}>WORKSPACE</span>
+                  <h2>Settings</h2>
+                </div>
+              </div>
+
+              <div className={styles.rows}>
+                {/* 1. Profile */}
+                <div
+                  className={`${styles.row} ${styles.settingsRowClickable}`}
+                  onClick={() => setIsProfileModalOpen(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsProfileModalOpen(true);
+                    }
+                  }}
+                  title="View and edit your personal information"
+                >
+                  <div className={styles.rowIcon}>
+                    <UserCheck size={14} />
+                  </div>
+                  <div className={styles.rowMain}>
+                    <strong>Profile</strong>
+                    <span>Personal information</span>
+                  </div>
+                  <span className={styles.statusAction}>Edit →</span>
+                </div>
+
+                {/* 2. Security */}
+                <div className={styles.row}>
+                  <div className={styles.rowIcon}>
+                    <ShieldCheck size={14} />
+                  </div>
+                  <div className={styles.rowMain}>
+                    <strong>Security</strong>
+                    <span>Session and access</span>
+                  </div>
+                  <span className={styles.status}>Protected</span>
+                </div>
+
+                {/* 3. Theme */}
+                <div className={styles.row}>
+                  <div className={styles.rowIcon}>
+                    {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+                  </div>
+                  <div className={styles.rowMain}>
+                    <strong>Theme</strong>
+                    <span>Choose how DigiVirasat looks</span>
+                  </div>
+                  <div className={styles.rowThemeToggleWrap}>
+                    <button
+                      type="button"
+                      className={styles.statThemeToggleBtn}
+                      onClick={toggleTheme}
+                      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+                      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+                    >
+                      <span className={`${styles.themeOption} ${theme === 'light' ? styles.themeOptionActive : ''}`}>
+                        <Sun size={10} /> Light
+                      </span>
+                      <span className={`${styles.themeOption} ${theme === 'dark' ? styles.themeOptionActive : ''}`}>
+                        <Moon size={10} /> Dark
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Preferences */}
+                <div className={styles.row}>
+                  <div className={styles.rowIcon}>
+                    <Settings size={14} />
+                  </div>
+                  <div className={styles.rowMain}>
+                    <strong>Preferences</strong>
+                    <span>Display options</span>
+                  </div>
+                  <span className={styles.status}>Available</span>
+                </div>
+              </div>
+            </section>
+
+            {/* Right Column: Support / Contact (50%) */}
+            <section className={`${styles.panel} ${styles.supportPanel}`}>
+              <div className={styles.panelHead}>
+                <div>
+                  <span className={styles.kicker}>SUPPORT</span>
+                  <h2>Need help?</h2>
+                </div>
+              </div>
+
+              <p className={styles.supportIntro}>
+                Have a question, found an issue, or need assistance with your digital legacy workspace? Send us a message and our team will get back to you.
+              </p>
+
+              {supportError && (
+                <div className={styles.supportAlertError} role="alert">
+                  <AlertTriangle size={13} />
+                  <span>{supportError}</span>
+                </div>
+              )}
+
+              {supportSuccess && (
+                <div className={styles.supportAlertSuccess} role="status">
+                  <Check size={13} />
+                  <span>{supportSuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSupportSubmit} className={styles.supportForm}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="supportName">Name</label>
+                  <input
+                    id="supportName"
+                    type="text"
+                    value={supportName}
+                    onChange={(e) => setSupportName(e.target.value)}
+                    placeholder="Your name"
+                    className={styles.supportInput}
+                    required
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="supportEmail">Email</label>
+                  <input
+                    id="supportEmail"
+                    type="email"
+                    value={supportEmail}
+                    onChange={(e) => setSupportEmail(e.target.value)}
+                    placeholder="Your email address"
+                    className={styles.supportInput}
+                    required
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="supportSubject">Subject</label>
+                  <input
+                    id="supportSubject"
+                    type="text"
+                    value={supportSubject}
+                    onChange={(e) => setSupportSubject(e.target.value)}
+                    placeholder="What can we help you with?"
+                    className={styles.supportInput}
+                    required
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="supportMessage">Message</label>
+                  <textarea
+                    id="supportMessage"
+                    rows={4}
+                    value={supportMessage}
+                    onChange={(e) => setSupportMessage(e.target.value)}
+                    placeholder="Describe your inquiry or issue in detail..."
+                    className={styles.supportTextarea}
+                    required
+                  />
+                </div>
+
+                <div className={styles.supportActions}>
+                  <button
+                    type="submit"
+                    className={styles.submitBtn}
+                    disabled={supportLoading}
+                  >
+                    {supportLoading ? 'Sending message...' : 'Send message'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        ) : (
+          <section className={styles.panel}>
           <div className={styles.panelHead}>
             <div>
               <span className={styles.kicker}>WORKSPACE</span>
@@ -2486,6 +2765,7 @@ export default function WorkspacePage({ section }) {
             )}
           </div>
         </section>
+        )}
 
         {!isDocSection && !isVaultSection && !isNomineeSection && section !== 'activity' && section !== 'calendar' && section !== 'settings' && (
           <section className={styles.empty}>
@@ -3639,6 +3919,12 @@ export default function WorkspacePage({ section }) {
             if (hasNew) navigate('/calendar', { replace: true });
           }}
           initialAddingTask={initialAddingTask}
+        />
+
+        {/* Profile Settings Modal */}
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
         />
       </main>
 

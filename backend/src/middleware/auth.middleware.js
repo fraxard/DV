@@ -19,8 +19,11 @@ const requireAuth = async (req, res, next) => {
         u.id,
         u.email,
         u.name,
+        u.avatar_url,
         u.email_verified,
         u.onboarding_completed,
+        u.date_of_birth,
+        u.gender,
         u.created_at
       FROM sessions s
       JOIN users u ON u.id = s.user_id

@@ -170,6 +170,13 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, []);
 
+  const updateUser = (userData) => {
+    setUser((prev) => {
+      if (!userData) return null;
+      return { ...prev, ...userData };
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -182,6 +189,7 @@ export function AuthProvider({ children }) {
         completeOnboarding,
         logout,
         checkAuth,
+        updateUser,
       }}
     >
       {children}

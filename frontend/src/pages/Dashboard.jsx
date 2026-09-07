@@ -33,6 +33,7 @@ import styles from './Dashboard.module.css';
 import BottomNav from '../components/BottomNav';
 import DayTaskModal from '../components/tasks/DayTaskModal';
 import { monthNames, weekdayNames, buildCalendar } from '../components/tasks/taskUtils';
+import { getAvatarUrl } from '../utils/avatar';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -103,6 +104,11 @@ const Dashboard = () => {
   );
   const [selectedDay, setSelectedDay] = useState(now.getDate());
   const [isFinancialHidden, setIsFinancialHidden] = useState(false);
+  const [avatarImgError, setAvatarImgError] = useState(false);
+
+  useEffect(() => {
+    setAvatarImgError(false);
+  }, [user?.avatar_url]);
 
   // Phase 4A Live Dashboard Data
   const [dashboardData, setDashboardData] = useState(null);
@@ -397,7 +403,16 @@ const Dashboard = () => {
             <Bell size={15} strokeWidth={1.8} />
           </Link>
           <Link className={styles.profileIcon} to="/settings" aria-label="Profile">
-            {(user?.full_name || user?.name || 'A').charAt(0).toUpperCase()}
+            {user?.avatar_url && !avatarImgError ? (
+              <img
+                src={getAvatarUrl(user.avatar_url)}
+                alt={user.name || 'Profile'}
+                className={styles.profileAvatarImg}
+                onError={() => setAvatarImgError(true)}
+              />
+            ) : (
+              (user?.full_name || user?.name || 'A').charAt(0).toUpperCase()
+            )}
           </Link>
         </div>
       </aside>
