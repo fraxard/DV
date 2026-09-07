@@ -80,6 +80,21 @@
   --dv-soft:               #f3f5f3;
   --dv-dark:               #181a19;
   --dv-green:              #6c8d76;
+  --dv-card-border:        var(--dv-line, rgba(28, 32, 29, 0.085));
+  --dv-card-border-hover:  rgba(35, 40, 37, 0.13);
+  --dv-card-shadow:        0 12px 28px rgba(45, 53, 48, 0.055), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  --dv-card-shadow-hover:  0 17px 35px rgba(45, 53, 48, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --dv-hero-shadow:        0 20px 45px rgba(24, 28, 25, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --dv-hero-shadow-hover:  0 20px 45px rgba(24, 28, 25, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  --dv-hero-border-hover:  rgba(255, 255, 255, 0.12);
+  --dv-rail-active-bg:     rgba(255, 255, 255, 0.8);
+  --dv-rail-active-color:  #222623;
+  --dv-rail-active-shadow: 0 5px 14px rgba(42, 50, 45, 0.07);
+  --dv-rail-hover-bg:      rgba(255, 255, 255, 0.8);
+  --dv-rail-hover-color:   #222623;
+  --dv-profile-bg:         #dfe7e1;
+  --dv-profile-color:      #46544b;
+  --dv-profile-border:     transparent;
 
   /* ── Typography ────────────────────────────────────────── */
   --font-sans:   'Inter', system-ui, -apple-system, sans-serif;
@@ -232,8 +247,23 @@
   --dv-surface-solid:      #181d1a;
   --dv-ink:                #f0f4f1;
   --dv-muted:              #869189;
-  --dv-line:               rgba(255, 255, 255, 0.09);
+  --dv-line:               rgba(255, 255, 255, 0.055);
   --dv-soft:               #1e2420;
   --dv-dark:               #111513;
   --dv-green:              #7da589;
+  --dv-card-border:        rgba(255, 255, 255, 0.05);
+  --dv-card-border-hover:  rgba(255, 255, 255, 0.09);
+  --dv-card-shadow:        0 8px 24px -4px rgba(0, 0, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --dv-card-shadow-hover:  0 14px 32px -4px rgba(0, 0, 0, 0.52), 0 4px 10px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --dv-hero-shadow:        0 14px 34px -6px rgba(0, 0, 0, 0.48), 0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --dv-hero-shadow-hover:  0 18px 40px -6px rgba(0, 0, 0, 0.56), 0 6px 14px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --dv-hero-border-hover:  rgba(255, 255, 255, 0.09);
+  --dv-rail-active-bg:     rgba(255, 255, 255, 0.12);
+  --dv-rail-active-color:  #f0f4f1;
+  --dv-rail-active-shadow: 0 2px 8px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --dv-rail-hover-bg:      rgba(255, 255, 255, 0.07);
+  --dv-rail-hover-color:   #ffffff;
+  --dv-profile-bg:         rgba(255, 255, 255, 0.10);
+  --dv-profile-color:      #f0f4f1;
+  --dv-profile-border:     rgba(255, 255, 255, 0.08);
 }

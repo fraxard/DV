@@ -114,25 +114,39 @@
   transition: .22s ease;
 }
 
-.railButton:hover,
+.railButton:hover {
+  color: var(--dv-rail-hover-color, #222623);
+  background: var(--dv-rail-hover-bg, rgba(255,255,255,.8));
+}
+
 .railButtonActive {
-  color: #222623;
-  background: rgba(255,255,255,.8);
-  box-shadow: 0 5px 14px rgba(42,50,45,.07);
+  color: var(--dv-rail-active-color, #222623);
+  background: var(--dv-rail-active-bg, rgba(255,255,255,.8));
+  box-shadow: var(--dv-rail-active-shadow, 0 5px 14px rgba(42,50,45,.07));
+}
+
+.railButtonActive:hover {
+  color: var(--dv-rail-active-color, #222623);
+  background: var(--dv-rail-active-bg, rgba(255,255,255,.8));
 }
 
 .profileIcon {
   width: 31px;
   height: 31px;
-  border: 0;
+  border: 1px solid var(--dv-profile-border, transparent);
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #dfe7e1;
-  color: #46544b;
+  background: var(--dv-profile-bg, #dfe7e1);
+  color: var(--dv-profile-color, #46544b);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
+  transition: background .22s ease, color .22s ease, border-color .22s ease, opacity .22s ease;
+}
+
+.profileIcon:hover {
+  opacity: 0.88;
 }
 
 .page {
@@ -195,7 +209,7 @@
 
 .mainGrid {
   display: grid;
-  grid-template-columns: 1.15fr 0.92fr 0.93fr;
+  grid-template-columns: 1.15fr 1fr 1fr;
   gap: 12px;
 }
 
@@ -205,22 +219,18 @@
   overflow: hidden;
   box-sizing: border-box;
   padding: 18px;
-  border: 1px solid var(--dv-line);
+  border: 1px solid var(--dv-card-border, var(--dv-line));
   border-radius: 19px;
   background: var(--dv-surface);
   backdrop-filter: blur(16px);
-  box-shadow:
-    0 12px 28px rgba(45,53,48,.055),
-    inset 0 1px 0 rgba(255,255,255,.82);
+  box-shadow: var(--dv-card-shadow);
   transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
 }
 
 .card:hover {
   transform: translateY(-2px);
-  border-color: rgba(35,40,37,.13);
-  box-shadow:
-    0 17px 35px rgba(45,53,48,.08),
-    inset 0 1px 0 rgba(255,255,255,.9);
+  border-color: var(--dv-card-border-hover);
+  box-shadow: var(--dv-card-shadow-hover);
 }
 
 .cardTop {
@@ -251,12 +261,13 @@
   background:
     radial-gradient(circle at 85% 20%, rgba(128,151,135,.2), transparent 30%),
     linear-gradient(145deg, var(--dv-dark, #181a19) 0%, #101211 75%);
-  border-color: var(--dv-line);
-  box-shadow: 0 20px 45px rgba(24,28,25,.16), inset 0 1px 0 rgba(255,255,255,.08);
+  border-color: var(--dv-card-border, var(--dv-line));
+  box-shadow: var(--dv-hero-shadow);
 }
 
 .heroCard:hover {
-  border-color: rgba(255,255,255,.12);
+  border-color: var(--dv-hero-border-hover, rgba(255,255,255,.12));
+  box-shadow: var(--dv-hero-shadow-hover);
 }
 
 .heroPattern {
@@ -413,6 +424,7 @@
   grid-column: 3;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 .countPill {
@@ -427,8 +439,8 @@
 .nomineeList {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  margin-top: 18px;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .personRow {
@@ -504,6 +516,7 @@
 
 .calendarCard {
   grid-column: 1;
+  grid-row: span 2;
   display: flex;
   flex-direction: column;
 }
@@ -519,12 +532,14 @@
   grid-column: 2;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 .healthCard {
   grid-column: 3;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 .quickCard {
@@ -679,7 +694,7 @@
 }
 
 .calendarUpcomingSection {
-  margin-top: 14px;
+  margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--dv-line);
   display: flex;
@@ -872,7 +887,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px 15px;
-  margin-top: 17px;
+  margin-top: 12px;
 }
 
 .categoryRow {
@@ -884,7 +899,7 @@
   padding: 7px 6px;
   margin: 0 -6px;
   border-radius: 8px;
-  border-bottom: 1px solid rgba(30,35,32,.055);
+  border-bottom: 1px solid var(--dv-line);
   color: #676e69;
   font-size: 9px;
   text-decoration: none;
@@ -893,8 +908,8 @@
 }
 
 .categoryRow:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: #171917;
+  background: var(--dv-soft);
+  color: var(--dv-ink);
 }
 
 .categoryIcon {
@@ -913,19 +928,16 @@
   font-weight: 650;
 }
 
-.vaultCard .textAction {
-  margin-top: 14px;
-}
-
-.healthCard {
-  display: flex;
-  flex-direction: column;
+.vaultCard .textAction,
+.nomineeCardPanel .textAction {
+  margin-top: auto;
+  padding-top: 10px;
 }
 
 .healthRing {
-  width: 74px;
-  height: 74px;
-  margin: 15px auto 8px;
+  width: 62px;
+  height: 62px;
+  margin: 10px auto 6px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -969,8 +981,8 @@
 .miniChecks {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 11px;
+  gap: 3px;
+  margin-top: 8px;
 }
 
 .miniChecks span {
@@ -1035,20 +1047,23 @@
 }
 
 .financeCard {
-  grid-column: 1 / 3;
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .financeMain {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 12px;
 }
 
 .financeMain div {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 
 .financeMain span {
@@ -1057,7 +1072,7 @@
 }
 
 .financeMain strong {
-  font-size: 25px;
+  font-size: 22px;
   font-weight: 600;
   letter-spacing: -.05em;
   color: var(--dv-ink);
@@ -1066,7 +1081,7 @@
 .eyeButton {
   border: 1px solid var(--dv-line);
   border-radius: 8px;
-  padding: 5px 8px;
+  padding: 4px 7px;
   background: var(--dv-soft, #f2f4f2);
   color: var(--dv-muted, #777e79);
   font-size: 8px;
@@ -1077,14 +1092,14 @@
 .financeBreakdown {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 18px;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .financeBreakdown div {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .financeBreakdown span {
@@ -1101,7 +1116,7 @@
   display: flex;
   height: 4px;
   gap: 2px;
-  margin-top: 15px;
+  margin-top: 10px;
   overflow: hidden;
   border-radius: 99px;
   background: #e7eae7;
@@ -1272,7 +1287,7 @@
   background:
     radial-gradient(circle at 10% 90%, rgba(210,225,214,.18), transparent 32%),
     var(--dv-surface, rgba(249,250,248,.92));
-  border: 1px solid var(--dv-line);
+  border: 1px solid var(--dv-card-border, var(--dv-line));
 }
 
 .readinessCard p {
