@@ -15,6 +15,7 @@ import CategoryBuilderModal from '../components/CategoryBuilderModal';
 import ProfileModal from '../components/profile/ProfileModal';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getAvatarUrl, getInitials } from '../utils/avatar';
 import {
   formatTaskDate,
   formatTaskTime,
@@ -121,7 +122,7 @@ const configs = {
     description: 'Manage your workspace preferences and account-level options.',
     icon: Settings,
     actions: [],
-    stats: [['Secure', 'session'], ['7 days', 'session window'], ['Light', 'theme']],
+    stats: [['Secure', 'session'], ['7 days', 'session window'], ['Profile', 'account']],
     rows: [
       ['Profile', 'Personal information', 'Available'],
       ['Security', 'Session and access', 'Protected'],
@@ -264,6 +265,11 @@ export default function WorkspacePage({ section }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [avatarImgError, setAvatarImgError] = useState(false);
+
+  useEffect(() => {
+    setAvatarImgError(false);
+  }, [user?.avatar_url]);
   const config = configs[section] || configs.vault;
   const Icon = config.icon;
   const hasNew = new URLSearchParams(location.search).get('new');
@@ -327,9 +333,10 @@ export default function WorkspacePage({ section }) {
 
     try {
       setSupportLoading(true);
-      const res = await fetch(`${API_URL}/support/contact`, {
+      const res = await fetch(`${API_URL}/support`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           name: trimmedName,
           email: trimmedEmail,
@@ -340,19 +347,11 @@ export default function WorkspacePage({ section }) {
 
       const data = await res.json();
 
-      if (res.status === 501) {
-        setSupportError(
-          data?.error?.message ||
-          'Support ticket ingestion is not yet configured on this server. Backend endpoint is pending Phase 2.'
-        );
-        return;
-      }
-
       if (!res.ok) {
         throw new Error(data?.error?.message || 'Failed to submit support message.');
       }
 
-      setSupportSuccess('Thank you for contacting DigiVirasat. Our team will review your message shortly.');
+      setSupportSuccess(data?.message || 'Thank you for contacting DigiVirasat. Your message has been received.');
       setSupportSubject('');
       setSupportMessage('');
     } catch (err) {
@@ -1507,7 +1506,7 @@ export default function WorkspacePage({ section }) {
     ? [
         ['Secure', 'session'],
         ['7 days', 'session window'],
-        [theme === 'dark' ? 'Dark' : 'Light', 'theme'],
+        [user?.name || 'Profile', 'account'],
       ]
     : config.stats;
 
@@ -1537,26 +1536,42 @@ export default function WorkspacePage({ section }) {
         <section className={styles.stats}>
           {currentStats.map(([value, label], idx) => {
             if (section === 'settings' && idx === 2) {
+              const fullName = user?.name?.trim() || user?.email?.split('@')[0] || 'User';
+              const initials = getInitials(fullName) || 'U';
+
               return (
-                <div className={`${styles.stat} ${styles.statTheme}`} key={label}>
-                  <div className={styles.statThemeHeader}>
-                    <strong>{theme === 'dark' ? 'Dark' : 'Light'}</strong>
-                    <span>THEME</span>
+                <div
+                  className={`${styles.stat} ${styles.statProfile}`}
+                  key="settings-profile-card"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsProfileModalOpen(true);
+                    }
+                  }}
+                  title="View and edit your personal information"
+                >
+                  <div className={styles.statAvatarWrap}>
+                    {user?.avatar_url && !avatarImgError ? (
+                      <img
+                        src={getAvatarUrl(user.avatar_url)}
+                        alt={fullName}
+                        className={styles.statAvatarImg}
+                        onError={() => setAvatarImgError(true)}
+                      />
+                    ) : (
+                      <span className={styles.statAvatarInitials}>{initials}</span>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    className={styles.statThemeToggleBtn}
-                    onClick={toggleTheme}
-                    aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-                    title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-                  >
-                    <span className={`${styles.themeOption} ${theme === 'light' ? styles.themeOptionActive : ''}`}>
-                      <Sun size={10} /> Light
-                    </span>
-                    <span className={`${styles.themeOption} ${theme === 'dark' ? styles.themeOptionActive : ''}`}>
-                      <Moon size={10} /> Dark
-                    </span>
-                  </button>
+                  <div className={styles.statProfileInfo}>
+                    <strong className={styles.statProfileName} title={fullName}>
+                      {fullName}
+                    </strong>
+                    <span className={styles.statProfileLabel}>Profile</span>
+                  </div>
                 </div>
               );
             }

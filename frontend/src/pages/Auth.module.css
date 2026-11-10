@@ -194,6 +194,13 @@
 }
 .forgot:hover { text-decoration: underline; }
 
+.securityNotice {
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
 .inputWrap {
   position: relative;
 }

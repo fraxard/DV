@@ -72,10 +72,7 @@ export default function Login() {
             </div>
 
             <div className={styles.field}>
-              <div className={styles.labelRow}>
-                <label className={styles.label} htmlFor="password">Password</label>
-                <a href="#" className={styles.forgot}>Forgot password?</a>
-              </div>
+              <label className={styles.label} htmlFor="password">Password</label>
               <div className={styles.inputWrap}>
                 <input id="password" type={showPassword ? 'text' : 'password'} className={styles.input} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
                 <button type="button" className={styles.eyeBtn} onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
@@ -86,6 +83,9 @@ export default function Login() {
                   )}
                 </button>
               </div>
+              <p className={styles.securityNotice}>
+                Note: If you forget your password, your vault will be inaccessible due to security reasons. Please keep your password safe.
+              </p>
             </div>
 
             {error && <div className={styles.error} role="alert"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>{error}</div>}

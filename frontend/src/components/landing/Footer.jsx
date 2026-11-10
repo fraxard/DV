@@ -11,7 +11,7 @@ const navLinks = [
 const legalLinks = [
   { label: 'Privacy Policy', href: '#' },
   { label: 'Terms of Service', href: '#' },
-  { label: 'Help Centre', href: '#' },
+  { label: 'Help Centre', href: '#contact' },
 ];
 
 export default function Footer() {

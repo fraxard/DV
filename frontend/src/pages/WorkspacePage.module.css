@@ -2042,6 +2042,86 @@
   letter-spacing: .08em;
 }
 
+.statProfile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.statProfile:hover {
+  border-color: var(--w-ink);
+}
+
+.statAvatarWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--w-line);
+  background: var(--dv-profile-bg, #dfe7e1);
+  color: var(--dv-profile-ink, #253329);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform var(--t-fast, 0.15s ease);
+}
+
+.statProfile:hover .statAvatarWrap {
+  transform: scale(1.04);
+}
+
+:global([data-theme="dark"]) .statAvatarWrap {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--w-ink, #f0f4f1);
+  border-color: var(--w-line);
+}
+
+.statAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.statAvatarInitials {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.statProfileInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.statProfileName {
+  display: block;
+  font-size: 18px;
+  letter-spacing: -.03em;
+  font-weight: 600;
+  color: var(--w-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.statProfileLabel {
+  display: block;
+  margin-top: 4px;
+  color: var(--w-muted, #8c938e);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
 /* ============================================================
    Settings Page Two-Column Layout & Support Section
    ============================================================ */

@@ -8,6 +8,7 @@ import ProductPreview from '../components/landing/ProductPreview';
 import Security from '../components/landing/Security';
 import Nominees from '../components/landing/Nominees';
 import Pricing from '../components/landing/Pricing';
+import Contact from '../components/landing/Contact';
 import CTA from '../components/landing/CTA';
 import Footer from '../components/landing/Footer';
 
@@ -45,6 +46,7 @@ export default function Landing() {
         <Security />
         <Nominees />
         <Pricing />
+        <Contact />
         <CTA />
       </main>
       <Footer />
