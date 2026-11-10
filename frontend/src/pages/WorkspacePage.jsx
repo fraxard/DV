@@ -25,7 +25,7 @@ import {
   buildCalendar,
 } from '../components/tasks/taskUtils';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api/client';
 
 const formatCleanNumber = (val) => {
   const num = Number(val);
@@ -333,23 +333,12 @@ export default function WorkspacePage({ section }) {
 
     try {
       setSupportLoading(true);
-      const res = await fetch(`${API_URL}/support`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: trimmedName,
-          email: trimmedEmail,
-          subject: trimmedSubject,
-          message: trimmedMessage,
-        }),
+      const data = await api.post('/support', {
+        name: trimmedName,
+        email: trimmedEmail,
+        subject: trimmedSubject,
+        message: trimmedMessage,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Failed to submit support message.');
-      }
 
       setSupportSuccess(data?.message || 'Thank you for contacting DigiVirasat. Your message has been received.');
       setSupportSubject('');
@@ -550,11 +539,8 @@ export default function WorkspacePage({ section }) {
   const fetchDocuments = async () => {
     try {
       setLoadingDocs(true);
-      const res = await fetch(`${API_URL}/documents`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(data.documents || []);
-      }
+      const data = await api.get('/documents');
+      setDocuments(data.documents || []);
     } catch (err) {
       console.error('Failed to load documents:', err);
     } finally {
@@ -565,11 +551,8 @@ export default function WorkspacePage({ section }) {
   const fetchAssets = async () => {
     try {
       setLoadingAssets(true);
-      const res = await fetch(`${API_URL}/vault/assets`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setAssets(data.assets || []);
-      }
+      const data = await api.get('/vault/assets');
+      setAssets(data.assets || []);
     } catch (err) {
       console.error('Failed to load assets:', err);
     } finally {
@@ -580,11 +563,8 @@ export default function WorkspacePage({ section }) {
   const fetchNominees = async () => {
     try {
       setLoadingNominees(true);
-      const res = await fetch(`${API_URL}/nominees`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setNominees(data.nominees || []);
-      }
+      const data = await api.get('/nominees');
+      setNominees(data.nominees || []);
     } catch (err) {
       console.error('Failed to load nominees:', err);
     } finally {
@@ -596,11 +576,7 @@ export default function WorkspacePage({ section }) {
     try {
       setLoadingActivities(true);
       setActivityError('');
-      const res = await fetch(`${API_URL}/activity?page=${page}&limit=${activityLimit}`, { credentials: 'include' });
-      if (!res.ok) {
-        throw new Error('Failed to load activities');
-      }
-      const data = await res.json();
+      const data = await api.get(`/activity?page=${page}&limit=${activityLimit}`);
       setActivities(data.activities || []);
       if (data.pagination) {
         setActivityPage(data.pagination.page);
@@ -614,7 +590,7 @@ export default function WorkspacePage({ section }) {
       }
     } catch (err) {
       console.error('Failed to load activities:', err);
-      setActivityError('Unable to load activity.');
+      setActivityError(err.message || 'Unable to load activity.');
     } finally {
       setLoadingActivities(false);
     }
@@ -627,11 +603,8 @@ export default function WorkspacePage({ section }) {
 
   const fetchCustomCategories = async () => {
     try {
-      const res = await fetch(`${API_URL}/custom-categories`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setCustomCategories(data.categories || []);
-      }
+      const data = await api.get('/custom-categories');
+      setCustomCategories(data.categories || []);
     } catch (err) {
       console.error('Failed to load custom categories:', err);
     }
@@ -640,11 +613,8 @@ export default function WorkspacePage({ section }) {
   const fetchTasks = async () => {
     try {
       setLoadingTasks(true);
-      const res = await fetch(`${API_URL}/tasks`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setTasks(data.tasks || []);
-      }
+      const data = await api.get('/tasks');
+      setTasks(data.tasks || []);
     } catch (err) {
       console.error('Failed to load tasks:', err);
     } finally {
@@ -680,20 +650,9 @@ export default function WorkspacePage({ section }) {
   const handleSaveCustomCategory = async (catData, existingId = null) => {
     try {
       setIsSubmittingCategory(true);
-      const url = existingId ? `${API_URL}/custom-categories/${existingId}` : `${API_URL}/custom-categories`;
-      const method = existingId ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(catData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Failed to save custom category.');
-      }
+      const data = existingId
+        ? await api.put(`/custom-categories/${existingId}`, catData)
+        : await api.post('/custom-categories', catData);
 
       await fetchCustomCategories();
       // If newly created, set this category on the active asset form
@@ -715,16 +674,9 @@ export default function WorkspacePage({ section }) {
   // -------------------------------------------------------------
   const handleToggleTaskStatus = async (taskId, nextStatus) => {
     try {
-      const res = await fetch(`${API_URL}/tasks/${taskId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      if (res.ok) {
-        await fetchTasks();
-        await fetchActivities(1);
-      }
+      await api.patch(`/tasks/${taskId}/status`, { status: nextStatus });
+      await fetchTasks();
+      await fetchActivities(1);
     } catch (err) {
       console.error('Failed to update task status:', err);
     }
@@ -732,14 +684,9 @@ export default function WorkspacePage({ section }) {
 
   const handleDeleteTask = async (taskId) => {
     try {
-      const res = await fetch(`${API_URL}/tasks/${taskId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (res.ok) {
-        await fetchTasks();
-        await fetchActivities(1);
-      }
+      await api.delete(`/tasks/${taskId}`);
+      await fetchTasks();
+      await fetchActivities(1);
     } catch (err) {
       console.error('Failed to delete task:', err);
     }
@@ -748,19 +695,10 @@ export default function WorkspacePage({ section }) {
   const handleSaveTask = async (taskData, existingTaskId = null) => {
     try {
       setIsSubmittingTask(true);
-      const url = existingTaskId ? `${API_URL}/tasks/${existingTaskId}` : `${API_URL}/tasks`;
-      const method = existingTaskId ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(taskData),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error?.message || 'Failed to save task.');
+      if (existingTaskId) {
+        await api.put(`/tasks/${existingTaskId}`, taskData);
+      } else {
+        await api.post('/tasks', taskData);
       }
 
       await fetchTasks();
@@ -834,19 +772,10 @@ export default function WorkspacePage({ section }) {
         notes: nomineeFormData.notes.trim() || undefined,
       };
 
-      const url = editingNominee ? `${API_URL}/nominees/${editingNominee.id}` : `${API_URL}/nominees`;
-      const method = editingNominee ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Failed to save nominee.');
+      if (editingNominee) {
+        await api.put(`/nominees/${editingNominee.id}`, payload);
+      } else {
+        await api.post('/nominees', payload);
       }
 
       await fetchNominees();
@@ -875,16 +804,7 @@ export default function WorkspacePage({ section }) {
       setIsDeletingNominee(true);
       setDeleteNomineeError('');
 
-      const res = await fetch(`${API_URL}/nominees/${nomineeToDelete.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error?.message || 'Failed to delete nominee.');
-      }
-
+      await api.delete(`/nominees/${nomineeToDelete.id}`);
       await fetchNominees();
       setNomineeToDelete(null);
     } catch (err) {
@@ -901,15 +821,10 @@ export default function WorkspacePage({ section }) {
     try {
       setIsLoadingAllocations(true);
       setAllocationError('');
-      const res = await fetch(`${API_URL}/vault/assets/${assetId}/nominees`, {
-        credentials: 'include',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAssetAllocations(data.nominees || []);
-        setTotalAllocated(data.total_allocated_percentage || 0);
-        setRemainingAllocated(data.remaining_percentage !== undefined ? data.remaining_percentage : 100);
-      }
+      const data = await api.get(`/vault/assets/${assetId}/nominees`);
+      setAssetAllocations(data.nominees || []);
+      setTotalAllocated(data.total_allocated_percentage || 0);
+      setRemainingAllocated(data.remaining_percentage !== undefined ? data.remaining_percentage : 100);
     } catch (err) {
       console.error('Failed to load asset allocations:', err);
     } finally {
@@ -992,26 +907,17 @@ export default function WorkspacePage({ section }) {
       setAllocationError('');
 
       const isEdit = Boolean(editingAssignment);
-      const url = isEdit
-        ? `${API_URL}/vault/assets/${allocatingAsset.id}/nominees/${editingAssignment.nominee_id}`
-        : `${API_URL}/vault/assets/${allocatingAsset.id}/nominees`;
-      const method = isEdit ? 'PUT' : 'POST';
+      const allocPayload = {
+        nomineeId: assignFormData.nomineeId,
+        allocationPercentage: val,
+        canView: assignFormData.canView,
+        canDownloadDocs: assignFormData.canDownloadDocs,
+      };
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          nomineeId: assignFormData.nomineeId,
-          allocationPercentage: val,
-          canView: assignFormData.canView,
-          canDownloadDocs: assignFormData.canDownloadDocs,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message || (isEdit ? 'Failed to update allocation.' : 'Failed to assign nominee.'));
+      if (isEdit) {
+        await api.put(`/vault/assets/${allocatingAsset.id}/nominees/${editingAssignment.nominee_id}`, allocPayload);
+      } else {
+        await api.post(`/vault/assets/${allocatingAsset.id}/nominees`, allocPayload);
       }
 
       setEditingAssignment(null);
@@ -1034,14 +940,7 @@ export default function WorkspacePage({ section }) {
   const handleRemoveNomineeAssignment = async (nomineeId) => {
     try {
       setAllocationError('');
-      const res = await fetch(`${API_URL}/vault/assets/${allocatingAsset.id}/nominees/${nomineeId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error?.message || 'Failed to remove assignment.');
-      }
+      await api.delete(`/vault/assets/${allocatingAsset.id}/nominees/${nomineeId}`);
       if (editingAssignment && editingAssignment.nominee_id === nomineeId) {
         handleCancelEditAssignment();
       }
@@ -1139,19 +1038,10 @@ export default function WorkspacePage({ section }) {
         payload.valuationDate = null;
       }
 
-      const url = editingAsset ? `${API_URL}/vault/assets/${editingAsset.id}` : `${API_URL}/vault/assets`;
-      const method = editingAsset ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message || (editingAsset ? 'Failed to update asset.' : 'Failed to create asset.'));
+      if (editingAsset) {
+        await api.put(`/vault/assets/${editingAsset.id}`, payload);
+      } else {
+        await api.post('/vault/assets', payload);
       }
 
       await fetchAssets();
@@ -1185,15 +1075,7 @@ export default function WorkspacePage({ section }) {
       setIsDeletingAsset(true);
       setDeleteAssetError('');
 
-      const res = await fetch(`${API_URL}/vault/assets/${assetToDelete.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error?.message || 'Failed to delete asset.');
-      }
+      await api.delete(`/vault/assets/${assetToDelete.id}`);
 
       await fetchAssets();
       if (isDocSection) await fetchDocuments();
@@ -1242,17 +1124,7 @@ export default function WorkspacePage({ section }) {
         assetId: editDocFormData.assetId || null,
       };
 
-      const res = await fetch(`${API_URL}/documents/${editingDocument.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Failed to update document.');
-      }
+      await api.put(`/documents/${editingDocument.id}`, payload);
 
       await fetchDocuments();
       setEditingDocument(null);
@@ -1280,15 +1152,7 @@ export default function WorkspacePage({ section }) {
       setIsDeletingDoc(true);
       setDeleteError('');
 
-      const res = await fetch(`${API_URL}/documents/${documentToDelete.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error?.message || 'Failed to delete document.');
-      }
+      await api.delete(`/documents/${documentToDelete.id}`);
 
       setDocuments((prev) => prev.filter((d) => d.id !== documentToDelete.id));
       setDocumentToDelete(null);
@@ -1296,6 +1160,23 @@ export default function WorkspacePage({ section }) {
       setDeleteError(err.message);
     } finally {
       setIsDeletingDoc(false);
+    }
+  };
+
+  const handleDownloadDoc = async (docId, fileName) => {
+    try {
+      const blob = await api.download(`/documents/${docId}/download`);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName || 'document');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      alert(err.message || 'Error downloading document.');
     }
   };
 
@@ -1385,16 +1266,7 @@ export default function WorkspacePage({ section }) {
       if (uploadFormData.description) formData.append('description', uploadFormData.description.trim());
       if (uploadFormData.assetId) formData.append('assetId', uploadFormData.assetId);
 
-      const res = await fetch(`${API_URL}/documents`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Failed to upload document.');
-      }
+      await api.upload('/documents', formData);
 
       setUploadFormData({ name: '', description: '', assetId: '', file: null });
       navigate('/documents');
@@ -1841,15 +1713,15 @@ export default function WorkspacePage({ section }) {
                       >
                         <Pencil size={13} />
                       </button>
-                      <a
-                        href={`${API_URL}/documents/${doc.id}/download`}
+                      <button
+                        onClick={() => handleDownloadDoc(doc.id, doc.name || doc.file_name)}
                         className={styles.iconActionBtn}
                         title="Download file"
                         aria-label="Download file"
-                        download
+                        type="button"
                       >
                         <Download size={13} />
-                      </a>
+                      </button>
                       <button
                         onClick={() => handleOpenDeleteConfirm(doc)}
                         className={styles.iconActionBtn}

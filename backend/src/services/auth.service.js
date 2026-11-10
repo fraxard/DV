@@ -146,18 +146,28 @@ const register = async ({ name, email, password }) => {
   const user = result.rows[0];
 
   const verification = await createEmailVerificationToken(user.id);
+  let emailSent = false;
 
-  await sendVerificationEmail({
-    email: user.email,
-    token: verification.token,
-  });
+  try {
+    await sendVerificationEmail({
+      email: user.email,
+      token: verification.token,
+    });
+    emailSent = true;
+  } catch (emailErr) {
+    console.error('[Registration] Failed to dispatch verification email:', emailErr.message || emailErr);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV OTP Verification Code for ${user.email}]: ${verification.token}`);
+    }
+  }
 
   const session = await createSession(user.id);
 
   return {
     user,
     session,
-    verificationToken: verification.token,
+    emailNotificationSent: emailSent,
+    verificationToken: process.env.NODE_ENV !== 'production' ? verification.token : undefined,
     verificationExpiresAt: verification.expiresAt,
   };
 };
@@ -320,14 +330,25 @@ const resendEmailVerification = async (userId) => {
 
   const verification = await createEmailVerificationToken(user.id);
 
-  await sendVerificationEmail({
-    email: user.email,
-    token: verification.token,
-  });
+  try {
+    await sendVerificationEmail({
+      email: user.email,
+      token: verification.token,
+    });
+  } catch (emailErr) {
+    console.error('[Resend Verification] Failed to dispatch email:', emailErr.message || emailErr);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV OTP Verification Code for ${user.email}]: ${verification.token}`);
+    }
+    const error = new Error('Verification email could not be delivered at this time. Please check your email or try again shortly.');
+    error.statusCode = 502;
+    error.code = 'EMAIL_DELIVERY_FAILED';
+    throw error;
+  }
 
   return {
     user,
-    verificationToken: verification.token,
+    verificationToken: process.env.NODE_ENV !== 'production' ? verification.token : undefined,
     verificationExpiresAt: verification.expiresAt,
   };
 };

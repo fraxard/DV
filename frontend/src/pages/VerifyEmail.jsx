@@ -21,6 +21,9 @@ export default function VerifyEmail({ onVerified }) {
       try {
         const data = JSON.parse(stored);
         setEmail(data.email || user?.email || '');
+        if (data.devVerificationToken) {
+          setToken(data.devVerificationToken);
+        }
       } catch {
         setEmail(user?.email || '');
       }

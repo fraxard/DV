@@ -35,7 +35,7 @@ import DayTaskModal from '../components/tasks/DayTaskModal';
 import { monthNames, weekdayNames, buildCalendar } from '../components/tasks/taskUtils';
 import { getAvatarUrl } from '../utils/avatar';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api/client';
 
 const CATEGORY_ICONS = {
   financial: Landmark,
@@ -133,13 +133,7 @@ const Dashboard = () => {
     try {
       setLoadingDashboard(true);
       setDashboardError(null);
-      const res = await fetch(`${API_URL}/dashboard`, {
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        throw new Error(`Failed to load dashboard data (Status ${res.status})`);
-      }
-      const json = await res.json();
+      const json = await api.get('/dashboard');
       setDashboardData(json.data || json);
     } catch (err) {
       console.error('Error fetching dashboard:', err);
@@ -152,13 +146,8 @@ const Dashboard = () => {
   const fetchDashboardNominees = useCallback(async () => {
     try {
       setLoadingNominees(true);
-      const res = await fetch(`${API_URL}/nominees/dashboard-summary`, {
-        credentials: 'include',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setNomineeSummary(data);
-      }
+      const data = await api.get('/nominees/dashboard-summary');
+      setNomineeSummary(data);
     } catch (err) {
       console.error('Failed to load dashboard nominees:', err);
     } finally {
@@ -175,13 +164,8 @@ const Dashboard = () => {
       const startDate = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`;
       const endDate = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(daysInM).padStart(2, '0')}`;
 
-      const res = await fetch(`${API_URL}/tasks?startDate=${startDate}&endDate=${endDate}`, {
-        credentials: 'include',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTasks(data.tasks || []);
-      }
+      const data = await api.get(`/tasks?startDate=${startDate}&endDate=${endDate}`);
+      setTasks(data.tasks || []);
     } catch (err) {
       console.error('Failed to load tasks for calendar:', err);
     }
@@ -189,11 +173,8 @@ const Dashboard = () => {
 
   const fetchVaultAssets = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/vault/assets`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setVaultAssets(data.assets || []);
-      }
+      const data = await api.get('/vault/assets');
+      setVaultAssets(data.assets || []);
     } catch (err) {
       console.error('Failed to load assets for tasks:', err);
     }
@@ -218,16 +199,9 @@ const Dashboard = () => {
 
   const handleToggleTaskStatus = async (taskId, nextStatus) => {
     try {
-      const res = await fetch(`${API_URL}/tasks/${taskId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      if (res.ok) {
-        await fetchTasksForMonth(year, month);
-        fetchDashboard(); // Refresh recent activity if logged
-      }
+      await api.patch(`/tasks/${taskId}/status`, { status: nextStatus });
+      await fetchTasksForMonth(year, month);
+      fetchDashboard(); // Refresh recent activity if logged
     } catch (err) {
       console.error('Failed to update task status:', err);
     }
@@ -235,33 +209,19 @@ const Dashboard = () => {
 
   const handleDeleteTask = async (taskId) => {
     try {
-      const res = await fetch(`${API_URL}/tasks/${taskId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (res.ok) {
-        await fetchTasksForMonth(year, month);
-        fetchDashboard();
-      }
+      await api.delete(`/tasks/${taskId}`);
+      await fetchTasksForMonth(year, month);
+      fetchDashboard();
     } catch (err) {
       console.error('Failed to delete task:', err);
     }
   };
 
   const handleSaveTask = async (taskData, existingTaskId = null) => {
-    const url = existingTaskId ? `${API_URL}/tasks/${existingTaskId}` : `${API_URL}/tasks`;
-    const method = existingTaskId ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(taskData),
-    });
-
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson?.error?.message || 'Failed to save task.');
+    if (existingTaskId) {
+      await api.put(`/tasks/${existingTaskId}`, taskData);
+    } else {
+      await api.post('/tasks', taskData);
     }
 
     await fetchTasksForMonth(year, month);

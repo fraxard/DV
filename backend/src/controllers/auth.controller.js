@@ -1,12 +1,17 @@
 const authService = require('../services/auth.service');
+const { SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } = require('../config/session');
 
 const setSessionCookie = (res, sessionId, expiresAt) => {
-  res.cookie('dv_session', sessionId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  res.cookie(SESSION_COOKIE_NAME, sessionId, {
+    ...SESSION_COOKIE_OPTIONS,
     expires: expiresAt,
-    path: '/',
+  });
+};
+
+const clearSessionCookie = (res) => {
+  res.clearCookie(SESSION_COOKIE_NAME, {
+    ...SESSION_COOKIE_OPTIONS,
+    maxAge: 0,
   });
 };
 
@@ -32,6 +37,9 @@ const register = async (req, res) => {
   const {
     user,
     session,
+    emailNotificationSent,
+    verificationToken,
+    verificationExpiresAt,
   } = await authService.register({
     name,
     email,
@@ -42,13 +50,14 @@ const register = async (req, res) => {
 
   const response = {
     user,
+    emailNotificationSent: emailNotificationSent ?? true,
   };
 
-  // Development only.
-  // if (process.env.NODE_ENV !== 'production') {
-  //   response.devVerificationToken = verificationToken;
-  //   response.devVerificationExpiresAt = verificationExpiresAt;
-  // }
+  // Safe development/test fallback when Resend is in testing mode
+  if (process.env.NODE_ENV !== 'production' && verificationToken) {
+    response.devVerificationToken = verificationToken;
+    response.devVerificationExpiresAt = verificationExpiresAt;
+  }
 
   return res.status(201).json(response);
 };
@@ -96,32 +105,28 @@ const verifyEmail = async (req, res) => {
 };
 
 const resendVerification = async (req, res) => {
-  await authService.resendEmailVerification(req.user.id);
+  const result = await authService.resendEmailVerification(req.user.id);
 
   const response = {
     message: 'Verification email resent.',
   };
 
-  // Development only.
-  // if (process.env.NODE_ENV !== 'production') {
-  //   response.devVerificationToken = verificationToken;
-  //   response.devVerificationExpiresAt = verificationExpiresAt;
-  // }
+  if (process.env.NODE_ENV !== 'production' && result.verificationToken) {
+    response.devVerificationToken = result.verificationToken;
+    response.devVerificationExpiresAt = result.verificationExpiresAt;
+  }
 
   return res.status(200).json(response);
 };
 
 const logout = async (req, res) => {
-  const sessionId = req.cookies.dv_session;
+  const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
 
-  await authService.logout(sessionId);
+  if (sessionId) {
+    await authService.logout(sessionId);
+  }
 
-  res.clearCookie('dv_session', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    path: '/',
-  });
+  clearSessionCookie(res);
 
   return res.status(204).send();
 };

@@ -1,19 +1,20 @@
-﻿const LocalStorageProvider = require('./localStorage');
+const LocalStorageProvider = require('./localStorage');
+const S3StorageProvider = require('./s3Storage');
 
-const driver = process.env.STORAGE_DRIVER || 'local';
+const driver = (process.env.STORAGE_DRIVER || 'local').toLowerCase();
 
 let storageInstance = null;
 
-switch (driver.toLowerCase()) {
+switch (driver) {
+  case 's3':
+  case 'r2':
+    storageInstance = new S3StorageProvider();
+    break;
+
   case 'local':
   default:
     storageInstance = new LocalStorageProvider();
     break;
-
-  // Cloudflare R2 / S3 driver will be plugged in here in future phases:
-  // case 'r2':
-  //   storageInstance = new R2StorageProvider(...);
-  //   break;
 }
 
 module.exports = storageInstance;

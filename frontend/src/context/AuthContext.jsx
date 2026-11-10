@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { api } from '../api/client';
 
 const AuthContext = createContext(null);
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -11,20 +10,10 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        setUser(null);
-        return;
-      }
-
-      const data = await response.json();
-      setUser(data.user);
-    } catch (error) {
-      console.error('Auth check failed:', error);
+      const data = await api.get('/auth/me');
+      setUser(data?.user || null);
+    } catch {
+      // 401 or network failure on initial load simply means unauthenticated
       setUser(null);
     } finally {
       setLoading(false);
@@ -32,132 +21,43 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data?.error?.message || 'Login failed.');
-    }
-
+    const data = await api.post('/auth/login', { email, password });
     setUser(data.user);
-
     return data.user;
   };
 
   const register = async (name, email, password) => {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        name,
-        email,
-        password,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data?.error?.message || 'Registration failed.');
-    }
-
+    const data = await api.post('/auth/register', { name, email, password });
     setUser(data.user);
-
-    // Return the complete response so the verification flow
-    // can access the development token.
     return data;
   };
 
   const verifyEmail = async (token) => {
-    const response = await fetch(`${API_URL}/auth/verify-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ token }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error?.message || 'Email verification failed.'
-      );
-    }
-
+    const data = await api.post('/auth/verify-email', { token });
     setUser(data.user);
-
     return data.user;
   };
 
   const resendVerification = async () => {
-    const response = await fetch(`${API_URL}/auth/resend-verification`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error?.message || 'Could not resend verification.'
-      );
-    }
-
-    return data;
+    return await api.post('/auth/resend-verification');
   };
 
-  const completeOnboarding = async ({
-    name,
-    dateOfBirth,
-    phone,
-    country,
-  }) => {
-    const response = await fetch(`${API_URL}/auth/onboarding`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        name,
-        dateOfBirth,
-        phone,
-        country,
-      }),
+  const completeOnboarding = async ({ name, dateOfBirth, phone, country }) => {
+    const data = await api.put('/auth/onboarding', {
+      name,
+      dateOfBirth,
+      phone,
+      country,
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error?.message || 'Failed to complete onboarding.'
-      );
-    }
-
     setUser(data.user);
-
     return data.user;
   };
 
   const logout = async () => {
     try {
-      await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      await api.post('/auth/logout');
+    } catch (err) {
+      console.warn('Logout API error (clearing local session):', err.message);
     } finally {
       setUser(null);
     }
@@ -165,7 +65,6 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (authCheckStarted.current) return;
-
     authCheckStarted.current = true;
     checkAuth();
   }, []);

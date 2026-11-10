@@ -10,7 +10,7 @@ import styles from './AssetDetails.module.css';
 import { ASSET_CATEGORY_FIELDS, getCategoryFieldConfig } from '../config/assetCategoryFields';
 import BottomNav from '../components/BottomNav';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api/client';
 
 const CATEGORY_META = {
   property: {
@@ -177,11 +177,8 @@ export default function AssetDetails() {
 
   const fetchCustomCategories = async () => {
     try {
-      const res = await fetch(`${API_URL}/custom-categories`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setCustomCategories(data.categories || []);
-      }
+      const data = await api.get('/custom-categories');
+      setCustomCategories(data.categories || []);
     } catch (err) {
       console.error('Error fetching custom categories:', err);
     }
@@ -241,21 +238,7 @@ export default function AssetDetails() {
       setLoadingAsset(true);
       setAssetError('');
       setIsNotFound(false);
-      const res = await fetch(`${API_URL}/vault/assets/${assetId}`, { credentials: 'include' });
-      if (res.status === 404 || res.status === 403) {
-        setIsNotFound(true);
-        setAssetError('Asset not found');
-        setAsset(null);
-        return;
-      }
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setIsNotFound(false);
-        setAssetError(data.error?.message || "We couldn't load this asset.");
-        setAsset(null);
-        return;
-      }
-      const data = await res.json().catch(() => ({}));
+      const data = await api.get(`/vault/assets/${assetId}`);
       if (!data || !data.asset) {
         setIsNotFound(false);
         setAssetError("We couldn't load this asset.");
@@ -265,8 +248,14 @@ export default function AssetDetails() {
       setAsset(data.asset);
     } catch (err) {
       console.error('Error fetching asset:', err);
-      setIsNotFound(false);
-      setAssetError("We couldn't load this asset.");
+      if (err.status === 404 || err.status === 403) {
+        setIsNotFound(true);
+        setAssetError('Asset not found');
+      } else {
+        setIsNotFound(false);
+        setAssetError(err.message || "We couldn't load this asset.");
+      }
+      setAsset(null);
     } finally {
       setLoadingAsset(false);
     }
@@ -276,11 +265,8 @@ export default function AssetDetails() {
   const fetchDocuments = async () => {
     try {
       setLoadingDocs(true);
-      const res = await fetch(`${API_URL}/documents?assetId=${assetId}`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(data.documents || []);
-      }
+      const data = await api.get(`/documents?assetId=${assetId}`);
+      setDocuments(data.documents || []);
     } catch (err) {
       console.error('Error fetching documents:', err);
     } finally {
@@ -292,13 +278,10 @@ export default function AssetDetails() {
   const fetchAllocations = async () => {
     try {
       setLoadingAllocations(true);
-      const res = await fetch(`${API_URL}/vault/assets/${assetId}/nominees`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setAllocations(data.nominees || []);
-        setTotalAllocated(data.total_allocated_percentage || 0);
-        setRemainingAllocated(data.remaining_percentage !== undefined ? data.remaining_percentage : 100);
-      }
+      const data = await api.get(`/vault/assets/${assetId}/nominees`);
+      setAllocations(data.nominees || []);
+      setTotalAllocated(data.total_allocated_percentage || 0);
+      setRemainingAllocated(data.remaining_percentage !== undefined ? data.remaining_percentage : 100);
     } catch (err) {
       console.error('Error fetching allocations:', err);
     } finally {
@@ -309,11 +292,8 @@ export default function AssetDetails() {
   // Fetch User's Global Nominee Directory
   const fetchAllNominees = async () => {
     try {
-      const res = await fetch(`${API_URL}/nominees`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setAllNominees(data.nominees || []);
-      }
+      const data = await api.get('/nominees');
+      setAllNominees(data.nominees || []);
     } catch (err) {
       console.error('Error fetching nominees:', err);
     }
@@ -373,22 +353,12 @@ export default function AssetDetails() {
         currency: editFormData.currency.trim().toUpperCase() || 'INR',
         valuationDate: editFormData.valuationDate || null,
       };
-      const res = await fetch(`${API_URL}/vault/assets/${assetId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setEditFormError(data.error?.message || 'Failed to update asset.');
-        return;
-      }
+      const data = await api.put(`/vault/assets/${assetId}`, payload);
       setAsset(data.asset);
       setIsEditAssetOpen(false);
     } catch (err) {
       console.error('Error updating asset:', err);
-      setEditFormError('An unexpected error occurred while saving.');
+      setEditFormError(err.message || 'An unexpected error occurred while saving.');
     } finally {
       setIsSubmittingEdit(false);
     }
@@ -451,24 +421,12 @@ export default function AssetDetails() {
         };
       }
 
-      const res = await fetch(`${API_URL}/vault/assets/${assetId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ metadata: updatedMetadata }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setCategoryInfoError(data.error?.message || 'Failed to update category information.');
-        return;
-      }
-
+      const data = await api.put(`/vault/assets/${assetId}`, { metadata: updatedMetadata });
       setAsset(data.asset);
       setIsEditCategoryInfoOpen(false);
     } catch (err) {
       console.error('Error updating category metadata:', err);
-      setCategoryInfoError('An error occurred while saving category details.');
+      setCategoryInfoError(err.message || 'An error occurred while saving category details.');
     } finally {
       setIsSavingCategoryInfo(false);
     }
@@ -493,19 +451,11 @@ export default function AssetDetails() {
     try {
       setIsDeletingAsset(true);
       setDeleteError('');
-      const res = await fetch(`${API_URL}/vault/assets/${assetId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setDeleteError(data.error?.message || 'Failed to delete asset.');
-        return;
-      }
+      await api.delete(`/vault/assets/${assetId}`);
       navigate('/vault', { replace: true });
     } catch (err) {
       console.error('Error deleting asset:', err);
-      setDeleteError('An unexpected error occurred while deleting.');
+      setDeleteError(err.message || 'An unexpected error occurred while deleting.');
     } finally {
       setIsDeletingAsset(false);
     }
@@ -570,21 +520,12 @@ export default function AssetDetails() {
       }
       form.append('assetId', assetId);
 
-      const res = await fetch(`${API_URL}/documents`, {
-        method: 'POST',
-        credentials: 'include',
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setUploadError(data.error?.message || 'Failed to upload document.');
-        return;
-      }
+      await api.upload('/documents', form);
       setIsUploadModalOpen(false);
       fetchDocuments();
     } catch (err) {
       console.error('Error uploading document:', err);
-      setUploadError('An unexpected error occurred during upload.');
+      setUploadError(err.message || 'An unexpected error occurred during upload.');
     } finally {
       setIsUploading(false);
     }
@@ -593,12 +534,7 @@ export default function AssetDetails() {
   // Handle Download Document
   const handleDownloadDoc = async (docId, fileName) => {
     try {
-      const res = await fetch(`${API_URL}/documents/${docId}/download`, { credentials: 'include' });
-      if (!res.ok) {
-        alert('Failed to download document. Please try again.');
-        return;
-      }
-      const blob = await res.blob();
+      const blob = await api.download(`/documents/${docId}/download`);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -609,7 +545,7 @@ export default function AssetDetails() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Error downloading document:', err);
-      alert('Error downloading document.');
+      alert(err.message || 'Error downloading document.');
     }
   };
 
@@ -618,20 +554,12 @@ export default function AssetDetails() {
     if (!documentToDelete) return;
     try {
       setIsDeletingDoc(true);
-      const res = await fetch(`${API_URL}/documents/${documentToDelete.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error?.message || 'Failed to delete document.');
-        return;
-      }
+      await api.delete(`/documents/${documentToDelete.id}`);
       setDocumentToDelete(null);
       fetchDocuments();
     } catch (err) {
       console.error('Error deleting document:', err);
-      alert('Error deleting document.');
+      alert(err.message || 'Error deleting document.');
     } finally {
       setIsDeletingDoc(false);
     }
@@ -691,50 +619,30 @@ export default function AssetDetails() {
 
       if (editingAssignment) {
         // Update allocation PUT
-        const res = await fetch(`${API_URL}/vault/assets/${assetId}/nominees/${editingAssignment.nominee_id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            allocationPercentage: pct,
-            canView: assignFormData.canView,
-            canDownloadDocs: assignFormData.canDownloadDocs,
-          }),
+        await api.put(`/vault/assets/${assetId}/nominees/${editingAssignment.nominee_id}`, {
+          allocationPercentage: pct,
+          canView: assignFormData.canView,
+          canDownloadDocs: assignFormData.canDownloadDocs,
         });
-        const data = await res.json();
-        if (!res.ok) {
-          setAssignError(data.error?.message || 'Failed to update allocation.');
-          return;
-        }
       } else {
         // Assign new nominee POST
         if (!assignFormData.nomineeId) {
           setAssignError('Please select a nominee.');
           return;
         }
-        const res = await fetch(`${API_URL}/vault/assets/${assetId}/nominees`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            nomineeId: assignFormData.nomineeId,
-            allocationPercentage: pct,
-            canView: assignFormData.canView,
-            canDownloadDocs: assignFormData.canDownloadDocs,
-          }),
+        await api.post(`/vault/assets/${assetId}/nominees`, {
+          nomineeId: assignFormData.nomineeId,
+          allocationPercentage: pct,
+          canView: assignFormData.canView,
+          canDownloadDocs: assignFormData.canDownloadDocs,
         });
-        const data = await res.json();
-        if (!res.ok) {
-          setAssignError(data.error?.message || 'Failed to assign nominee.');
-          return;
-        }
       }
 
       setIsAssignModalOpen(false);
       fetchAllocations();
     } catch (err) {
       console.error('Error assigning nominee:', err);
-      setAssignError('An unexpected error occurred.');
+      setAssignError(err.message || 'An unexpected error occurred.');
     } finally {
       setIsSubmittingAssign(false);
     }
@@ -743,19 +651,11 @@ export default function AssetDetails() {
   const handleRemoveNominee = async (nomineeId) => {
     if (!window.confirm('Are you sure you want to remove this nominee from this asset?')) return;
     try {
-      const res = await fetch(`${API_URL}/vault/assets/${assetId}/nominees/${nomineeId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error?.message || 'Failed to remove nominee.');
-        return;
-      }
+      await api.delete(`/vault/assets/${assetId}/nominees/${nomineeId}`);
       fetchAllocations();
     } catch (err) {
       console.error('Error removing nominee:', err);
-      alert('Error removing nominee.');
+      alert(err.message || 'Error removing nominee.');
     }
   };
 

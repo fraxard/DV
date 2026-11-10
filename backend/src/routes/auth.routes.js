@@ -1,13 +1,20 @@
+const router = require('express').Router();
 const { requireAuth } = require('../middleware/auth.middleware');
 const { handleUpload } = require('../middleware/upload.middleware');
-const router = require('express').Router();
-
+const {
+  loginRateLimiter,
+  registerRateLimiter,
+  verifyEmailRateLimiter,
+  resendVerificationRateLimiter,
+} = require('../middleware/rateLimit.middleware');
 const authController = require('../controllers/auth.controller');
 
-router.post('/register', authController.register);
-router.post('/login', authController.login);
+// Registration & Login with rate limiting
+router.post('/register', registerRateLimiter, authController.register);
+router.post('/login', loginRateLimiter, authController.login);
 
-router.post('/verify-email', authController.verifyEmail);
+// Email verification with OTP brute-force protection
+router.post('/verify-email', verifyEmailRateLimiter, authController.verifyEmail);
 
 router.put(
   '/onboarding',
@@ -18,6 +25,7 @@ router.put(
 router.post(
   '/resend-verification',
   requireAuth,
+  resendVerificationRateLimiter,
   authController.resendVerification
 );
 
@@ -31,8 +39,8 @@ router.post('/profile/avatar', requireAuth, handleUpload('avatar'), authControll
 router.get('/avatar/:userId', authController.getAvatar);
 
 // Profile email change with OTP re-verification
-router.post('/profile/request-email-change', requireAuth, authController.requestEmailChange);
-router.post('/profile/verify-email-change', requireAuth, authController.verifyEmailChange);
-router.post('/profile/resend-email-change', requireAuth, authController.resendEmailChange);
+router.post('/profile/request-email-change', requireAuth, resendVerificationRateLimiter, authController.requestEmailChange);
+router.post('/profile/verify-email-change', requireAuth, verifyEmailRateLimiter, authController.verifyEmailChange);
+router.post('/profile/resend-email-change', requireAuth, resendVerificationRateLimiter, authController.resendEmailChange);
 
-module.exports = router;
+module.exports = router;

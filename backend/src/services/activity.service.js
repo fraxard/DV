@@ -92,7 +92,11 @@ async function logActivity({ userId, action, title, category, metadata = {} }) {
     );
     return result.rows[0];
   } catch (err) {
-    console.error('Error logging activity:', err);
+    if (err.code === '23503') {
+      // User was deleted concurrently (e.g. during test cleanup)
+      return null;
+    }
+    console.error('Error logging activity:', err.message || err);
     return null;
   }
 }

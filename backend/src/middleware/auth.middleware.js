@@ -1,12 +1,14 @@
 const pool = require('../db');
+const { SESSION_COOKIE_NAME } = require('../config/session');
 
 const requireAuth = async (req, res, next) => {
-  const sessionId = req.cookies.dv_session;
+  const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
 
   if (!sessionId) {
     return res.status(401).json({
       error: {
         message: 'Authentication required.',
+        code: 'UNAUTHORIZED',
       },
     });
   }
@@ -37,6 +39,7 @@ const requireAuth = async (req, res, next) => {
     return res.status(401).json({
       error: {
         message: 'Invalid or expired session.',
+        code: 'SESSION_EXPIRED',
       },
     });
   }

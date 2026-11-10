@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import styles from './Contact.module.css';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { api } from '../../api/client';
 
 export default function Contact() {
   const [name, setName] = useState('');
@@ -53,22 +52,12 @@ export default function Contact() {
 
     try {
       setSubmitting(true);
-      const res = await fetch(`${API_URL}/support`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: trimmedName,
-          email: trimmedEmail,
-          subject: trimmedSubject,
-          message: trimmedMessage,
-        }),
+      const data = await api.post('/support', {
+        name: trimmedName,
+        email: trimmedEmail,
+        subject: trimmedSubject,
+        message: trimmedMessage,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Failed to submit support message.');
-      }
 
       setSuccess(
         data?.message ||

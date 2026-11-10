@@ -18,8 +18,7 @@ import Cropper from 'react-easy-crop';
 import { useAuth } from '../../context/AuthContext';
 import { getAvatarUrl } from '../../utils/avatar';
 import styles from './ProfileModal.module.css';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { api } from '../../api/client';
 
 const createImage = (url) =>
   new Promise((resolve, reject) => {
@@ -258,16 +257,7 @@ export default function ProfileModal({ isOpen, onClose }) {
         const formData = new FormData();
         formData.append('avatar', croppedBlob, 'avatar.jpg');
 
-        const avatarRes = await fetch(`${API_URL}/auth/profile/avatar`, {
-          method: 'POST',
-          credentials: 'include',
-          body: formData,
-        });
-
-        const avatarData = await avatarRes.json();
-        if (!avatarRes.ok) {
-          throw new Error(avatarData?.error?.message || 'Failed to upload profile picture.');
-        }
+        const avatarData = await api.upload('/auth/profile/avatar', formData);
 
         updatedUserData = avatarData.user;
         updateUser(avatarData.user);
@@ -276,21 +266,11 @@ export default function ProfileModal({ isOpen, onClose }) {
 
       // 2. If name, DOB, or gender changed, update profile
       if (isNameChanged || isDobChanged || isGenderChanged) {
-        const profileRes = await fetch(`${API_URL}/auth/profile`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            name: trimmedName,
-            dateOfBirth: dateOfBirth || null,
-            gender: gender || null,
-          }),
+        const profileData = await api.put('/auth/profile', {
+          name: trimmedName,
+          dateOfBirth: dateOfBirth || null,
+          gender: gender || null,
         });
-
-        const profileData = await profileRes.json();
-        if (!profileRes.ok) {
-          throw new Error(profileData?.error?.message || 'Failed to update profile details.');
-        }
 
         updatedUserData = profileData.user;
         updateUser(profileData.user);
@@ -298,17 +278,7 @@ export default function ProfileModal({ isOpen, onClose }) {
 
       // 3. If email changed, initiate OTP verification
       if (isEmailChanged) {
-        const otpReqRes = await fetch(`${API_URL}/auth/profile/request-email-change`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ newEmail: trimmedEmail }),
-        });
-
-        const otpReqData = await otpReqRes.json();
-        if (!otpReqRes.ok) {
-          throw new Error(otpReqData?.error?.message || 'Failed to initiate email verification.');
-        }
+        const otpReqData = await api.post('/auth/profile/request-email-change', { newEmail: trimmedEmail });
 
         setPendingEmail(trimmedEmail);
         setStep('otp');
@@ -342,17 +312,7 @@ export default function ProfileModal({ isOpen, onClose }) {
 
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/auth/profile/verify-email-change`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ token: cleanToken }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Verification failed. Please check the code.');
-      }
+      const data = await api.post('/auth/profile/verify-email-change', { token: cleanToken });
 
       updateUser(data.user);
       setSuccessMsg('Email updated and verified successfully.');
@@ -373,15 +333,7 @@ export default function ProfileModal({ isOpen, onClose }) {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch(`${API_URL}/auth/profile/resend-email-change`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Failed to resend code.');
-      }
+      const data = await api.post('/auth/profile/resend-email-change');
 
       setResendCountdown(60);
       setSuccessMsg(`A new code was sent to ${pendingEmail}`);

@@ -1,5 +1,6 @@
 const supportService = require('../services/support.service');
 const pool = require('../db');
+const { SESSION_COOKIE_NAME } = require('../config/session');
 
 /**
  * Optional session check so that authenticated requests attach the user_id
@@ -7,7 +8,7 @@ const pool = require('../db');
  */
 async function extractOptionalUser(req) {
   if (req.user?.id) return req.user.id;
-  const sessionId = req.cookies?.dv_session;
+  const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
   if (!sessionId) return null;
 
   try {

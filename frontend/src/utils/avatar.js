@@ -1,3 +1,5 @@
+import { getServerOrigin } from '../api/client';
+
 /**
  * Resolves avatar image URLs safely.
  * If the URL is relative (e.g. /api/auth/avatar/...), it prepends the backend origin.
@@ -15,8 +17,7 @@ export function getAvatarUrl(url) {
     return url;
   }
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-  const serverOrigin = apiBase.replace(/\/api\/?$/, '');
+  const serverOrigin = getServerOrigin();
   return `${serverOrigin}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
