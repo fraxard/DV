@@ -13,6 +13,7 @@ const SESSION_COOKIE_OPTIONS = {
   sameSite: isProd ? 'none' : 'lax',
   maxAge: SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000, // 7 days in milliseconds
   path: '/',
+  ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {}),
 };
 
 module.exports = {

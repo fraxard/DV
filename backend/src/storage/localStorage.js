@@ -42,7 +42,7 @@ class LocalStorageProvider extends IStorageService {
     return fullPath;
   }
 
-  async save(storageKey, buffer, mimeType) {
+  async save(storageKey, buffer, mimeType, options = {}) {
     const fullPath = this._resolveSafePath(storageKey);
     const parentDir = path.dirname(fullPath);
 
@@ -68,6 +68,11 @@ class LocalStorageProvider extends IStorageService {
     return fs.createReadStream(fullPath);
   }
 
+  async getSignedDownloadUrl(storageKey, options = {}) {
+    // Local storage does not use presigned cloud URLs; returns null so caller falls back to direct streaming endpoint
+    return null;
+  }
+
   async delete(storageKey) {
     try {
       const fullPath = this._resolveSafePath(storageKey);
@@ -89,6 +94,19 @@ class LocalStorageProvider extends IStorageService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async getMetadata(storageKey) {
+    const fullPath = this._resolveSafePath(storageKey);
+    try {
+      const stat = await fs.promises.stat(fullPath);
+      return {
+        size: stat.size,
+        lastModified: stat.mtime,
+      };
+    } catch {
+      throw new Error('File not found in storage');
     }
   }
 }

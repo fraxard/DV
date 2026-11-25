@@ -8,10 +8,14 @@
     "dev": "node --watch server.js",
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
-    "migrate": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down"
+    "test:storage": "node scripts/test-storage.js",
+    "migrate": "node-pg-migrate -d DATABASE_URL_DIRECT up",
+    "migrate:down": "node-pg-migrate -d DATABASE_URL_DIRECT down",
+    "db:check": "node src/db/check.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1177.0",
+    "@aws-sdk/s3-request-presigner": "^3.1177.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -23,6 +27,7 @@
     "multer": "^1.4.5-lts.1",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.0",
+    "razorpay": "^2.9.8",
     "resend": "^6.26.0"
   }
 }

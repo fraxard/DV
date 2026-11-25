@@ -26,6 +26,7 @@ describe('Document Management & Storage Lifecycle Tests', () => {
     if (userA) await userA.cleanup();
     if (userB) await userB.cleanup();
     await stopTestServer();
+    await pool.end();
   });
 
   test('Document Upload: rejects invalid file extension or disallowed MIME type', async () => {
@@ -133,6 +134,58 @@ describe('Document Management & Storage Lifecycle Tests', () => {
       userB.cookie
     );
     assert.equal(delRes.status, 404);
+  });
+
+  test('Document Presigned URL: returns valid short-lived presigned download URL', async () => {
+    const res = await request(
+      { path: `/api/documents/${uploadedDocId}/download-url`, method: 'GET' },
+      null,
+      userA.cookie
+    );
+
+    assert.equal(res.status, 200);
+    assert.ok(res.body.downloadUrl);
+    assert.equal(res.body.expiresIn, 900);
+
+    // Also verify query mode=url on standard download endpoint
+    const resMode = await request(
+      { path: `/api/documents/${uploadedDocId}/download?mode=url`, method: 'GET' },
+      null,
+      userA.cookie
+    );
+    assert.equal(resMode.status, 200);
+    assert.ok(resMode.body.downloadUrl);
+  });
+
+  test('Document File Replacement: replaces file content and updates metadata', async () => {
+    const replacementFile = createMultipart(
+      { name: 'Replacement Property Deed' },
+      {
+        name: 'file',
+        filename: 'replacement_deed.pdf',
+        contentType: 'application/pdf',
+        buffer: Buffer.from('%PDF-1.4 Replacement PDF binary content for testing %%EOF'),
+      }
+    );
+
+    const res = await request(
+      { path: `/api/documents/${uploadedDocId}`, method: 'PUT', headers: replacementFile.headers },
+      replacementFile.body,
+      userA.cookie
+    );
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.document.name, 'Replacement Property Deed');
+    assert.equal(res.body.document.file_name, 'replacement_deed.pdf');
+
+    // Download to verify new content
+    const dlRes = await request(
+      { path: `/api/documents/${uploadedDocId}/download`, method: 'GET' },
+      null,
+      userA.cookie
+    );
+    assert.equal(dlRes.status, 200);
+    assert.ok(dlRes.body.includes('Replacement PDF binary content'));
   });
 
   test('Document Update: updates document name and description', async () => {

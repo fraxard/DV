@@ -21,9 +21,7 @@ export default function VerifyEmail({ onVerified }) {
       try {
         const data = JSON.parse(stored);
         setEmail(data.email || user?.email || '');
-        if (data.devVerificationToken) {
-          setToken(data.devVerificationToken);
-        }
+
       } catch {
         setEmail(user?.email || '');
       }
@@ -190,7 +188,11 @@ export default function VerifyEmail({ onVerified }) {
             setToken(value);
           }}
           placeholder="000000"
+          name="otp"
           autoComplete="one-time-code"
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-bwignore="true"
           maxLength={6}
           pattern="[0-9]{6}"
           spellCheck="false"

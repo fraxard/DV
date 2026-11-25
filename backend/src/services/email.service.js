@@ -13,7 +13,7 @@ function escapeHtml(text) {
 }
 
 const sendVerificationEmail = async ({ email, token }) => {
-  const fromEmail = process.env.RESEND_FROM_EMAIL || 'DigiVirasat <onboarding@resend.dev>';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'DigiVirasat <no-reply@mail.digivirasat.in>';
   const { data, error } = await resend.emails.send({
     from: fromEmail,
     to: [email],
@@ -66,7 +66,7 @@ const sendSupportNotificationEmail = async ({
   submissionId,
   createdAt,
 }) => {
-  const fromEmail = process.env.RESEND_FROM_EMAIL || 'DigiVirasat <onboarding@resend.dev>';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'DigiVirasat <no-reply@mail.digivirasat.in>';
   const toEmail = process.env.SUPPORT_INBOX_EMAIL || 'fraxard@gmail.com';
   const formattedDate = createdAt ? new Date(createdAt).toUTCString() : new Date().toUTCString();
 

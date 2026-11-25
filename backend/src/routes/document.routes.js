@@ -11,7 +11,8 @@ router.post('/', handleUpload('file'), documentController.uploadDocument);
 router.get('/', documentController.listDocuments);
 router.get('/:id', documentController.getDocument);
 router.get('/:id/download', documentController.downloadDocument);
-router.put('/:id', documentController.updateDocument);
+router.get('/:id/download-url', documentController.getDownloadUrl);
+router.put('/:id', handleUpload('file'), documentController.updateDocument);
 router.delete('/:id', documentController.deleteDocument);
 
 module.exports = router;

@@ -17,6 +17,7 @@ describe('Vault & Asset Management Lifecycle Tests', () => {
     if (userA) await userA.cleanup();
     if (userB) await userB.cleanup();
     await stopTestServer();
+    await pool.end();
   });
 
   test('Asset Creation: rejects missing required asset name', async () => {

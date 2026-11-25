@@ -54,8 +54,10 @@ const createDocument = async ({
   const ext = path.extname(file.originalname).toLowerCase();
   const storageKey = `users/${userId}/${docId}${ext}`;
 
-  // 1. Save binary to storage provider
-  await storage.save(storageKey, file.buffer, file.mimetype);
+  // 1. Save binary to storage provider with original filename metadata
+  await storage.save(storageKey, file.buffer, file.mimetype, {
+    originalName: file.originalname.trim(),
+  });
 
   // 2. Insert metadata into PostgreSQL
   try {
@@ -109,7 +111,7 @@ const createDocument = async ({
 
     return created;
   } catch (err) {
-    // Clean up stored file if DB insertion fails
+    // Compensating transaction: clean up stored file if DB insertion fails
     await storage.delete(storageKey).catch(() => {});
     throw err;
   }
@@ -208,7 +210,49 @@ const getDocumentForDownload = async (userId, documentId) => {
   };
 };
 
-const updateDocument = async (userId, documentId, data) => {
+/**
+ * Generate a short-lived presigned download URL for a document.
+ * Verifies document ownership before issuing URL.
+ */
+const getDocumentDownloadUrl = async (userId, documentId, options = {}) => {
+  const result = await pool.query(
+    `
+      SELECT
+        id,
+        user_id,
+        name,
+        file_name,
+        mime_type,
+        file_size,
+        storage_key
+      FROM documents
+      WHERE id = $1
+        AND user_id = $2
+    `,
+    [documentId, userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw Errors.notFound('Document not found.');
+  }
+
+  const document = result.rows[0];
+  const expiresIn = options.expiresIn || 900; // 15 minutes
+
+  const presignedUrl = await storage.getSignedDownloadUrl(document.storage_key, {
+    fileName: document.file_name,
+    mimeType: document.mime_type,
+    expiresIn,
+  });
+
+  return {
+    document: formatDocument(document),
+    downloadUrl: presignedUrl || `/api/documents/${documentId}/download`,
+    expiresIn,
+  };
+};
+
+const updateDocument = async (userId, documentId, data, newFile = null) => {
   // Check existence & ownership first
   const existing = await getDocument(userId, documentId);
 
@@ -238,41 +282,83 @@ const updateDocument = async (userId, documentId, data) => {
     }
   }
 
-  const result = await pool.query(
-    `
-      UPDATE documents
-      SET
-        name = $1,
-        description = $2,
-        asset_id = $3,
-        updated_at = current_timestamp
-      WHERE id = $4
-        AND user_id = $5
-      RETURNING
-        id,
-        user_id,
-        asset_id,
-        name,
-        description,
-        file_name,
-        mime_type,
-        file_size,
-        created_at,
-        updated_at
-    `,
-    [name, description, assetId, documentId, userId]
-  );
+  let newStorageKey = null;
+  let fileName = existing.file_name;
+  let mimeType = existing.mime_type;
+  let fileSize = existing.file_size;
+  let storageKey = existing.storage_key;
 
-  const updated = result.rows[0];
-  logActivity({
-    userId,
-    action: 'document_updated',
-    title: `${updated.name} updated`,
-    category: 'documents',
-    metadata: { documentId: updated.id, name: updated.name },
-  }).catch(() => {});
+  // Handle optional replacement file upload
+  if (newFile && newFile.buffer) {
+    const ext = path.extname(newFile.originalname || '').toLowerCase();
+    const newDocId = crypto.randomUUID();
+    newStorageKey = `users/${userId}/${newDocId}${ext}`;
 
-  return updated;
+    await storage.save(newStorageKey, newFile.buffer, newFile.mimetype, {
+      originalName: newFile.originalname.trim(),
+    });
+
+    fileName = newFile.originalname.trim();
+    mimeType = newFile.mimetype.toLowerCase();
+    fileSize = newFile.size;
+    storageKey = newStorageKey;
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        UPDATE documents
+        SET
+          name = $1,
+          description = $2,
+          asset_id = $3,
+          file_name = $4,
+          mime_type = $5,
+          file_size = $6,
+          storage_key = $7,
+          updated_at = current_timestamp
+        WHERE id = $8
+          AND user_id = $9
+        RETURNING
+          id,
+          user_id,
+          asset_id,
+          name,
+          description,
+          file_name,
+          mime_type,
+          file_size,
+          created_at,
+          updated_at
+      `,
+      [name, description, assetId, fileName, mimeType, fileSize, storageKey, documentId, userId]
+    );
+
+    const updated = result.rows[0];
+
+    // If replacement succeeded, safely clean up old file from storage
+    if (newStorageKey && existing.storage_key) {
+      await storage.delete(existing.storage_key).catch((err) => {
+        console.warn(`Failed to delete replaced document file '${existing.storage_key}':`, err.message);
+      });
+    }
+
+    logActivity({
+      userId,
+      action: 'document_updated',
+      title: `${updated.name} updated`,
+      category: 'documents',
+      metadata: { documentId: updated.id, name: updated.name },
+    }).catch(() => {});
+
+    return updated;
+  } catch (err) {
+    // If replacement DB update failed, clean up the newly saved file
+    if (newStorageKey) {
+      await storage.delete(newStorageKey).catch(() => {});
+    }
+    throw err;
+  }
 };
 
 const deleteDocument = async (userId, documentId) => {
@@ -315,6 +401,7 @@ module.exports = {
   listDocuments,
   getDocument,
   getDocumentForDownload,
+  getDocumentDownloadUrl,
   updateDocument,
   deleteDocument,
 };

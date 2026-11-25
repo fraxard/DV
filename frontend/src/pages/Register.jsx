@@ -22,17 +22,10 @@ export default function Register() {
     try {
       const data = await register(name, email, password);
 
-      // Store the pending verification information temporarily.
-      // This allows the verification page to survive a page refresh
-      // during development.
+      // Store pending verification email temporarily for display purposes
       sessionStorage.setItem(
         'dv_pending_verification',
-        JSON.stringify({
-          email,
-          devVerificationToken: data.devVerificationToken || null,
-          devVerificationExpiresAt:
-            data.devVerificationExpiresAt || null,
-        })
+        JSON.stringify({ email })
       );
 
       // New users must verify their email before continuing.

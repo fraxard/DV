@@ -38,8 +38,6 @@ const register = async (req, res) => {
     user,
     session,
     emailNotificationSent,
-    verificationToken,
-    verificationExpiresAt,
   } = await authService.register({
     name,
     email,
@@ -52,12 +50,6 @@ const register = async (req, res) => {
     user,
     emailNotificationSent: emailNotificationSent ?? true,
   };
-
-  // Safe development/test fallback when Resend is in testing mode
-  if (process.env.NODE_ENV !== 'production' && verificationToken) {
-    response.devVerificationToken = verificationToken;
-    response.devVerificationExpiresAt = verificationExpiresAt;
-  }
 
   return res.status(201).json(response);
 };
@@ -105,18 +97,11 @@ const verifyEmail = async (req, res) => {
 };
 
 const resendVerification = async (req, res) => {
-  const result = await authService.resendEmailVerification(req.user.id);
+  await authService.resendEmailVerification(req.user.id);
 
-  const response = {
+  return res.status(200).json({
     message: 'Verification email resent.',
-  };
-
-  if (process.env.NODE_ENV !== 'production' && result.verificationToken) {
-    response.devVerificationToken = result.verificationToken;
-    response.devVerificationExpiresAt = result.verificationExpiresAt;
-  }
-
-  return res.status(200).json(response);
+  });
 };
 
 const logout = async (req, res) => {

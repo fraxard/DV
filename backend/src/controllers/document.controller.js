@@ -43,6 +43,14 @@ const getDocument = async (req, res) => {
 
 const downloadDocument = async (req, res) => {
   const { id } = req.params;
+  const { mode, url } = req.query;
+
+  // If client specifically requests a presigned URL instead of streaming binary
+  if (mode === 'url' || url === 'true') {
+    const presigned = await documentService.getDocumentDownloadUrl(req.user.id, id);
+    return res.status(200).json(presigned);
+  }
+
   const { document, stream } = await documentService.getDocumentForDownload(req.user.id, id);
 
   // Set appropriate headers for streaming file download
@@ -64,6 +72,12 @@ const downloadDocument = async (req, res) => {
   stream.pipe(res);
 };
 
+const getDownloadUrl = async (req, res) => {
+  const { id } = req.params;
+  const result = await documentService.getDocumentDownloadUrl(req.user.id, id);
+  return res.status(200).json(result);
+};
+
 const updateDocument = async (req, res) => {
   const { id } = req.params;
   const { name, description, assetId, asset_id } = req.body;
@@ -77,11 +91,16 @@ const updateDocument = async (req, res) => {
     throw Errors.badRequest('Document name cannot exceed 255 characters.');
   }
 
-  const document = await documentService.updateDocument(req.user.id, id, {
-    name,
-    description,
-    assetId: resolvedAssetId,
-  });
+  const document = await documentService.updateDocument(
+    req.user.id,
+    id,
+    {
+      name,
+      description,
+      assetId: resolvedAssetId,
+    },
+    req.file || null
+  );
 
   return res.status(200).json({ document });
 };
@@ -97,6 +116,7 @@ module.exports = {
   listDocuments,
   getDocument,
   downloadDocument,
+  getDownloadUrl,
   updateDocument,
   deleteDocument,
 };

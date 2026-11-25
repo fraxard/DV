@@ -156,9 +156,6 @@ const register = async ({ name, email, password }) => {
     emailSent = true;
   } catch (emailErr) {
     console.error('[Registration] Failed to dispatch verification email:', emailErr.message || emailErr);
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[DEV OTP Verification Code for ${user.email}]: ${verification.token}`);
-    }
   }
 
   const session = await createSession(user.id);
@@ -167,7 +164,6 @@ const register = async ({ name, email, password }) => {
     user,
     session,
     emailNotificationSent: emailSent,
-    verificationToken: process.env.NODE_ENV !== 'production' ? verification.token : undefined,
     verificationExpiresAt: verification.expiresAt,
   };
 };
@@ -221,9 +217,16 @@ const login = async ({ email, password }) => {
 };
 
 const verifyEmail = async (token) => {
+  if (!token || typeof token !== 'string' || !/^\d{6}$/.test(token.trim())) {
+    const error = new Error('Invalid or expired verification token.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const cleanToken = token.trim();
   const tokenHash = crypto
     .createHash('sha256')
-    .update(token)
+    .update(cleanToken)
     .digest('hex');
 
   const result = await pool.query(
@@ -337,9 +340,6 @@ const resendEmailVerification = async (userId) => {
     });
   } catch (emailErr) {
     console.error('[Resend Verification] Failed to dispatch email:', emailErr.message || emailErr);
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[DEV OTP Verification Code for ${user.email}]: ${verification.token}`);
-    }
     const error = new Error('Verification email could not be delivered at this time. Please check your email or try again shortly.');
     error.statusCode = 502;
     error.code = 'EMAIL_DELIVERY_FAILED';
@@ -348,7 +348,6 @@ const resendEmailVerification = async (userId) => {
 
   return {
     user,
-    verificationToken: process.env.NODE_ENV !== 'production' ? verification.token : undefined,
     verificationExpiresAt: verification.expiresAt,
   };
 };
@@ -503,37 +502,55 @@ const uploadAvatar = async (userId, file) => {
   const fileKey = crypto.randomUUID();
   const storageKey = `avatars/${userId}/${fileKey}${ext}`;
 
-  await storage.save(storageKey, file.buffer, file.mimetype);
+  // Check if existing avatar exists to clean up after update
+  const current = await pool.query(`SELECT avatar_url FROM users WHERE id = $1`, [userId]);
+  const oldAvatarKey = current.rows[0]?.avatar_url;
 
-  const result = await pool.query(
-    `
-      UPDATE users
-      SET
-        avatar_url = $1,
-        updated_at = current_timestamp
-      WHERE id = $2
-      RETURNING
-        id,
-        email,
-        name,
-        avatar_url,
-        email_verified,
-        onboarding_completed,
-        date_of_birth,
-        gender,
-        phone,
-        country,
-        created_at,
-        updated_at
-    `,
-    [storageKey, userId]
-  );
+  await storage.save(storageKey, file.buffer, file.mimetype, {
+    originalName: file.originalname || 'avatar',
+  });
 
-  if (result.rows.length === 0) {
-    throw Errors.notFound('User not found.');
+  try {
+    const result = await pool.query(
+      `
+        UPDATE users
+        SET
+          avatar_url = $1,
+          updated_at = current_timestamp
+        WHERE id = $2
+        RETURNING
+          id,
+          email,
+          name,
+          avatar_url,
+          email_verified,
+          onboarding_completed,
+          date_of_birth,
+          gender,
+          phone,
+          country,
+          created_at,
+          updated_at
+      `,
+      [storageKey, userId]
+    );
+
+    if (result.rows.length === 0) {
+      throw Errors.notFound('User not found.');
+    }
+
+    // Safely remove old avatar object if it existed
+    if (oldAvatarKey && oldAvatarKey.startsWith('avatars/')) {
+      await storage.delete(oldAvatarKey).catch((err) => {
+        console.warn(`Failed to clean up old avatar '${oldAvatarKey}':`, err.message);
+      });
+    }
+
+    return formatUser(result.rows[0]);
+  } catch (err) {
+    await storage.delete(storageKey).catch(() => {});
+    throw err;
   }
-
-  return formatUser(result.rows[0]);
 };
 
 const getAvatarStream = async (userId) => {
@@ -636,12 +653,11 @@ const requestEmailChange = async (userId, newEmail) => {
     message: 'Verification code sent to new email.',
     pendingEmail: normalizedEmail,
     expiresAt,
-    token: process.env.NODE_ENV !== 'production' ? token : undefined,
   };
 };
 
 const verifyEmailChange = async (userId, token) => {
-  if (!token || typeof token !== 'string') {
+  if (!token || typeof token !== 'string' || !/^\d{6}$/.test(token.trim())) {
     throw Errors.badRequest('Verification code is required.');
   }
 
@@ -781,7 +797,6 @@ const resendEmailChange = async (userId) => {
     message: 'Verification code resent.',
     pendingEmail,
     expiresAt,
-    token: process.env.NODE_ENV !== 'production' ? token : undefined,
   };
 };
 
